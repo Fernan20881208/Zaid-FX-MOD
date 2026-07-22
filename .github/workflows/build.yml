@@ -1,0 +1,54 @@
+name: Build Android64
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build Geode mod
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: given
+          cli: latest
+          target: Android64
+          build-config: Release
+          export-symbols: false
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: Zaid-FX-MOD-Android64
+          path: ${{ steps.build.outputs.build-output }}/*.geode
+          if-no-files-found: error
+
+      - name: Publish v0.1.0 release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            echo "Release v0.1.0 already exists; skipping."
+            exit 0
+          fi
+
+          gh release create v0.1.0 \
+            "${{ steps.build.outputs.build-output }}"/*.geode \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Zaid-FX-MOD v0.1.0" \
+            --notes-file changelog.md \
+            --latest

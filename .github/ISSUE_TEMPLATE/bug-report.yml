@@ -1,0 +1,29 @@
+name: Android bug report
+description: Report a crash, rendering issue or device incompatibility.
+title: "[Bug]: "
+labels: [bug, android]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device and GPU
+      placeholder: realme 15 5G / Mali-G615
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Geometry Dash and Geode versions
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Attach the latest Geode log or crash log.
