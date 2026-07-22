@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/loader/SettingV3.hpp>
-#include <Geode/modify/CCDirector.hpp>
+#include <Geode/modify/CCEGLView.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 
 #include "rendering/PostProcessRenderer.hpp"
@@ -66,7 +66,7 @@ void applyPreset(std::string_view preset) {
     mod->setSettingValue<double>("sharpen", values->sharpen);
 
     s_applyingPreset = false;
-    log::info("[ZaidFX][preset] applied {} to the real Geode settings", preset);
+    log::info("[ZaidFX][preset] applied {} to the live renderer settings", preset);
 }
 
 void markPresetCustom() {
@@ -91,9 +91,10 @@ std::string statusText() {
     auto const& settings = renderer.settings();
 
     return fmt::format(
-        "<cg>Zaid-FX-MOD</c> live post-processing\n\n"
+        "<cg>Zaid-FX-MOD</c> final-frame post-processing\n\n"
         "Effects: <c{}>{}</c>\n"
         "Pipeline: <c{}>{}</c>\n"
+        "Red test: <c{}>{}</c>\n"
         "Preset: <cy>{}</c>\n\n"
         "Intensity: {:.2f}\nBrightness: {:.2f}\nExposure: {:.2f}\n"
         "Contrast: {:.2f}\nSaturation: {:.2f}\nGamma: {:.2f}\n"
@@ -101,7 +102,9 @@ std::string statusText() {
         settings.enabled ? "g" : "r",
         settings.enabled ? "enabled" : "disabled",
         renderer.isPipelineReady() ? "g" : "y",
-        renderer.isPipelineReady() ? "ready" : "waiting for next rendered frame",
+        renderer.isPipelineReady() ? "ready" : "waiting for a presented frame",
+        settings.debugRedScreen ? "r" : "g",
+        settings.debugRedScreen ? "enabled" : "disabled",
         settings.preset,
         settings.intensity,
         settings.brightness,
@@ -123,6 +126,11 @@ void registerSettingListeners() {
     listenForSettingChanges<bool>("debug-logging", [](bool value) {
         log::info("[ZaidFX][slider] debug-logging generated {}", value);
         zaidfx::PostProcessRenderer::get().setBool("debug-logging", value);
+    });
+
+    listenForSettingChanges<bool>("debug-red-screen", [](bool value) {
+        log::info("[ZaidFX][slider] debug-red-screen generated {}", value);
+        zaidfx::PostProcessRenderer::get().setBool("debug-red-screen", value);
     });
 
     listenForSettingChanges<std::string>("preset", [](std::string value) {
@@ -161,22 +169,12 @@ void registerSettingListeners() {
 
 } // namespace
 
-class $modify(ZaidFXDirector, CCDirector) {
-    void drawScene() {
-        auto& renderer = zaidfx::PostProcessRenderer::get();
-
-        if (!renderer.shouldRender() || renderer.isCapturing()) {
-            CCDirector::drawScene();
-            return;
-        }
-
-        if (!renderer.beginCapture(this)) {
-            CCDirector::drawScene();
-            return;
-        }
-
-        CCDirector::drawScene();
-        renderer.endCaptureAndDraw(this);
+class $modify(ZaidFXEGLView, CCEGLView) {
+    void swapBuffers() {
+        // Geometry Dash has already drawn the complete menu or gameplay frame.
+        // Process that exact framebuffer before the platform presents it.
+        zaidfx::PostProcessRenderer::get().processPresentedFrame();
+        CCEGLView::swapBuffers();
     }
 };
 
@@ -192,8 +190,11 @@ class $modify(ZaidFXMenuLayer, MenuLayer) {
             return true;
         }
 
-        auto* icon = CCSprite::createWithSpriteFrameName("GJ_starBtn_001.png");
-        icon->setScale(0.65f);
+        auto* icon = CCSprite::createWithSpriteFrameName("ZaidFXLogo.png"_spr);
+        if (!icon) {
+            icon = CCSprite::createWithSpriteFrameName("GJ_starBtn_001.png");
+        }
+        icon->setScale(0.25f);
 
         auto* button = CCMenuItemSpriteExtra::create(
             icon,
@@ -215,5 +216,5 @@ class $modify(ZaidFXMenuLayer, MenuLayer) {
 $execute {
     zaidfx::PostProcessRenderer::get().initialize();
     registerSettingListeners();
-    log::info("Zaid-FX-MOD live shader settings initialized on Android");
+    log::info("Zaid-FX-MOD final-frame shader pipeline initialized on Android");
 }
