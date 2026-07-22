@@ -3,10 +3,12 @@
 #include "ShaderProgram.hpp"
 #include "../settings/Settings.hpp"
 
+#include <Geode/cocos/CCDirector.h>
 #include <Geode/cocos/misc_nodes/CCRenderTexture.h>
 #include <Geode/cocos/sprite_nodes/CCSprite.h>
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 namespace zaidfx {
