@@ -53,9 +53,9 @@ bool ShaderProgram::loadFromSource(
         return false;
     }
 
-    program->addAttribute(cocos2d::kCCAttributeNamePosition, cocos2d::kCCVertexAttrib_Position);
-    program->addAttribute(cocos2d::kCCAttributeNameColor, cocos2d::kCCVertexAttrib_Color);
-    program->addAttribute(cocos2d::kCCAttributeNameTexCoord, cocos2d::kCCVertexAttrib_TexCoords);
+    program->addAttribute(kCCAttributeNamePosition, cocos2d::kCCVertexAttrib_Position);
+    program->addAttribute(kCCAttributeNameColor, cocos2d::kCCVertexAttrib_Color);
+    program->addAttribute(kCCAttributeNameTexCoord, cocos2d::kCCVertexAttrib_TexCoords);
 
     if (!program->link()) {
         log::error("Shader link failed: {}", program->programLog());
