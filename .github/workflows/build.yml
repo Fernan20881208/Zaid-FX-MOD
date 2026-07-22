@@ -34,33 +34,21 @@ jobs:
           path: ${{ steps.build.outputs.build-output }}/*.geode
           if-no-files-found: error
 
-      - name: Publish and verify v0.1.0 release
+      - name: Publish v0.1.0 release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if ! gh release view v0.1.0 >/dev/null 2>&1; then
-            gh release create v0.1.0 \
-              "${{ steps.build.outputs.build-output }}"/*.geode \
-              --repo "${{ github.repository }}" \
-              --target "${{ github.sha }}" \
-              --title "Zaid-FX-MOD v0.1.0" \
-              --notes-file changelog.md \
-              --latest || gh release view v0.1.0 >/dev/null
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            echo "Release v0.1.0 already exists; skipping."
+            exit 0
           fi
 
-          mkdir -p docs/releases
-          gh release view v0.1.0 \
+          gh release create v0.1.0 \
+            "${{ steps.build.outputs.build-output }}"/*.geode \
             --repo "${{ github.repository }}" \
-            --json tagName,name,url,publishedAt,assets \
-            > docs/releases/v0.1.0.json
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/releases/v0.1.0.json
-
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: record v0.1.0 release [skip ci]"
-            git push
-          fi
+            --target "${{ github.sha }}" \
+            --title "Zaid-FX-MOD v0.1.0" \
+            --notes-file changelog.md \
+            --latest
