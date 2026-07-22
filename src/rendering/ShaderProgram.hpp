@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 
 namespace zaidfx {
 
@@ -24,8 +25,8 @@ public:
     bool loadFromSource(std::string const& vertexSource, std::string const& fragmentSource);
 
     void use() const;
-    void setFloat(char const* uniformName, float value) const;
-    void setVec2(char const* uniformName, float x, float y) const;
+    bool setFloat(char const* uniformName, float value) const;
+    bool setVec2(char const* uniformName, float x, float y) const;
     void reset();
 
     [[nodiscard]] cocos2d::CCGLProgram* get() const;
@@ -33,8 +34,10 @@ public:
 
 private:
     static std::string readTextFile(std::filesystem::path const& path);
+    int uniformLocation(char const* uniformName) const;
 
     cocos2d::CCGLProgram* m_program = nullptr;
+    mutable std::unordered_map<std::string, int> m_uniformLocations;
 };
 
 } // namespace zaidfx
