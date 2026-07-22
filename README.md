@@ -48,6 +48,15 @@ The package should be produced under `build-android64`.
 - Allow effects to be disabled immediately
 - Prefer reduced-resolution multipass effects on mobile GPUs
 
+## Developer and contact
+
+- **Developer:** Zaid Navarro
+- **Instagram:** [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
+- **WhatsApp:** [+52 33 4515 8805](https://wa.me/523345158805)
+- **Email:** [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
+
+These contact options are also included in `about.md`, which Geode displays on the mod information page.
+
 ## License
 
 MIT
