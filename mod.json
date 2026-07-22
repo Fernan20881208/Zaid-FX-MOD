@@ -15,7 +15,7 @@
     "community": "https://wa.me/523345158805"
   },
   "issues": {
-    "info": "Report Android device, GPU, Geode version and attach the latest crash log. Contact: zaidnavarrosaucedo@gmail.com",
+    "info": "Report Android device, GPU, Geode version and attach the latest crash log. More contact options are available in the Support tab.",
     "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
   },
   "dependencies": {
@@ -23,6 +23,9 @@
   },
   "resources": {
     "files": [
+      "about.md",
+      "changelog.md",
+      "support.md",
       "resources/shaders/*.vert",
       "resources/shaders/*.frag"
     ]
