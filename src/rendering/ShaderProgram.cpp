@@ -1,6 +1,7 @@
 #include "ShaderProgram.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/cocos/platform/CCGL.h>
 
 #include <fstream>
 #include <sstream>
@@ -16,7 +17,7 @@ ShaderProgram::~ShaderProgram() {
 std::string ShaderProgram::readTextFile(std::filesystem::path const& path) {
     std::ifstream input(path, std::ios::binary);
     if (!input) {
-        log::error("Unable to open shader file: {}", path.string());
+        log::error("[ZaidFX][shader] unable to open {}", path.string());
         return {};
     }
 
@@ -47,18 +48,17 @@ bool ShaderProgram::loadFromSource(
 
     auto* program = new cocos2d::CCGLProgram();
     if (!program->initWithVertexShaderByteArray(vertexSource.c_str(), fragmentSource.c_str())) {
-        log::error("Vertex shader compilation failed: {}", program->vertexShaderLog());
-        log::error("Fragment shader compilation failed: {}", program->fragmentShaderLog());
+        log::error("[ZaidFX][shader] vertex compile error: {}", program->vertexShaderLog());
+        log::error("[ZaidFX][shader] fragment compile error: {}", program->fragmentShaderLog());
         program->release();
         return false;
     }
 
     program->addAttribute(kCCAttributeNamePosition, cocos2d::kCCVertexAttrib_Position);
-    program->addAttribute(kCCAttributeNameColor, cocos2d::kCCVertexAttrib_Color);
     program->addAttribute(kCCAttributeNameTexCoord, cocos2d::kCCVertexAttrib_TexCoords);
 
     if (!program->link()) {
-        log::error("Shader link failed: {}", program->programLog());
+        log::error("[ZaidFX][shader] link error: {}", program->programLog());
         program->release();
         return false;
     }
@@ -66,16 +66,38 @@ bool ShaderProgram::loadFromSource(
     program->updateUniforms();
     m_program = program;
     m_uniformLocations.clear();
+
+    if (!isValid()) {
+        log::error("[ZaidFX][shader] linked program is not a valid GL program");
+        reset();
+        return false;
+    }
+
+    log::info(
+        "[ZaidFX][shader] compiled and linked successfully; program={}",
+        programID()
+    );
     return true;
 }
 
 void ShaderProgram::use() const {
-    if (!m_program) {
-        return;
+    if (m_program) {
+        m_program->use();
+    }
+}
+
+bool ShaderProgram::setInt(char const* uniformName, int value) const {
+    if (!m_program || !uniformName) {
+        return false;
     }
 
-    m_program->use();
-    m_program->setUniformsForBuiltins();
+    auto const location = uniformLocation(uniformName);
+    if (location < 0) {
+        return false;
+    }
+
+    m_program->setUniformLocationWith1i(location, value);
+    return true;
 }
 
 bool ShaderProgram::setFloat(char const* uniformName, float value) const {
@@ -119,8 +141,17 @@ cocos2d::CCGLProgram* ShaderProgram::get() const {
     return m_program;
 }
 
+unsigned int ShaderProgram::programID() const {
+    return m_program ? m_program->getProgram() : 0u;
+}
+
 bool ShaderProgram::isLoaded() const {
     return m_program != nullptr;
+}
+
+bool ShaderProgram::isValid() const {
+    auto const id = programID();
+    return id != 0u && glIsProgram(id) == GL_TRUE;
 }
 
 int ShaderProgram::uniformLocation(char const* uniformName) const {
@@ -131,6 +162,11 @@ int ShaderProgram::uniformLocation(char const* uniformName) const {
 
     auto const location = m_program->getUniformLocationForName(uniformName);
     m_uniformLocations.emplace(uniformName, location);
+
+    if (location < 0) {
+        log::error("[ZaidFX][shader] uniform not found: {}", uniformName);
+    }
+
     return location;
 }
 
