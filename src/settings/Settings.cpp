@@ -14,6 +14,7 @@ Settings Settings::read() {
     Settings settings {
         .enabled = mod->getSettingValue<bool>("enabled"),
         .debugLogging = mod->getSettingValue<bool>("debug-logging"),
+        .debugRedScreen = mod->getSettingValue<bool>("debug-red-screen"),
         .preset = mod->getSettingValue<std::string>("preset"),
         .intensity = static_cast<float>(mod->getSettingValue<double>("effect-intensity")),
         .brightness = static_cast<float>(mod->getSettingValue<double>("brightness")),
