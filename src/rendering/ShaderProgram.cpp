@@ -65,6 +65,7 @@ bool ShaderProgram::loadFromSource(
 
     program->updateUniforms();
     m_program = program;
+    m_uniformLocations.clear();
     return true;
 }
 
@@ -77,29 +78,37 @@ void ShaderProgram::use() const {
     m_program->setUniformsForBuiltins();
 }
 
-void ShaderProgram::setFloat(char const* uniformName, float value) const {
+bool ShaderProgram::setFloat(char const* uniformName, float value) const {
     if (!m_program || !uniformName) {
-        return;
+        return false;
     }
 
-    auto const location = m_program->getUniformLocationForName(uniformName);
-    if (location >= 0) {
-        m_program->setUniformLocationWith1f(location, value);
+    auto const location = uniformLocation(uniformName);
+    if (location < 0) {
+        return false;
     }
+
+    m_program->setUniformLocationWith1f(location, value);
+    return true;
 }
 
-void ShaderProgram::setVec2(char const* uniformName, float x, float y) const {
+bool ShaderProgram::setVec2(char const* uniformName, float x, float y) const {
     if (!m_program || !uniformName) {
-        return;
+        return false;
     }
 
-    auto const location = m_program->getUniformLocationForName(uniformName);
-    if (location >= 0) {
-        m_program->setUniformLocationWith2f(location, x, y);
+    auto const location = uniformLocation(uniformName);
+    if (location < 0) {
+        return false;
     }
+
+    m_program->setUniformLocationWith2f(location, x, y);
+    return true;
 }
 
 void ShaderProgram::reset() {
+    m_uniformLocations.clear();
+
     if (m_program) {
         m_program->release();
         m_program = nullptr;
@@ -112,6 +121,17 @@ cocos2d::CCGLProgram* ShaderProgram::get() const {
 
 bool ShaderProgram::isLoaded() const {
     return m_program != nullptr;
+}
+
+int ShaderProgram::uniformLocation(char const* uniformName) const {
+    auto const found = m_uniformLocations.find(uniformName);
+    if (found != m_uniformLocations.end()) {
+        return found->second;
+    }
+
+    auto const location = m_program->getUniformLocationForName(uniformName);
+    m_uniformLocations.emplace(uniformName, location);
+    return location;
 }
 
 } // namespace zaidfx
