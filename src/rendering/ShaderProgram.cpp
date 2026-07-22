@@ -1,5 +1,7 @@
 #include "ShaderProgram.hpp"
 
+#include <Geode/Geode.hpp>
+
 #include <fstream>
 #include <sstream>
 
@@ -45,8 +47,8 @@ bool ShaderProgram::loadFromSource(
 
     auto* program = new cocos2d::CCGLProgram();
     if (!program->initWithVertexShaderByteArray(vertexSource.c_str(), fragmentSource.c_str())) {
-        log::error("Shader compilation failed. Vertex log: {}", program->vertexShaderLog());
-        log::error("Shader compilation failed. Fragment log: {}", program->fragmentShaderLog());
+        log::error("Vertex shader compilation failed: {}", program->vertexShaderLog());
+        log::error("Fragment shader compilation failed: {}", program->fragmentShaderLog());
         program->release();
         return false;
     }
@@ -80,9 +82,20 @@ void ShaderProgram::setFloat(char const* uniformName, float value) const {
         return;
     }
 
-    auto location = m_program->getUniformLocationForName(uniformName);
+    auto const location = m_program->getUniformLocationForName(uniformName);
     if (location >= 0) {
         m_program->setUniformLocationWith1f(location, value);
+    }
+}
+
+void ShaderProgram::setVec2(char const* uniformName, float x, float y) const {
+    if (!m_program || !uniformName) {
+        return;
+    }
+
+    auto const location = m_program->getUniformLocationForName(uniformName);
+    if (location >= 0) {
+        m_program->setUniformLocationWith2f(location, x, y);
     }
 }
 
