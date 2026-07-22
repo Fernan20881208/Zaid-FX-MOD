@@ -8,24 +8,26 @@
   "version": "v0.1.0",
   "developer": "Zaid Navarro",
   "description": "Android post-processing and visual filter framework for Geometry Dash using Geode.",
-  "repository": "Fernan20881208/Zaid-FX-MOD",
   "links": {
     "source": "https://github.com/Fernan20881208/Zaid-FX-MOD",
     "homepage": "https://www.instagram.com/Zaid.nvr/",
     "community": "https://wa.me/523345158805"
   },
   "issues": {
-    "info": "Report Android device, GPU, Geode version and attach the latest crash log. More contact options are available in the Support tab.",
+    "info": "Report Android device, GPU, Geode version and attach the latest crash log. Email: zaidnavarrosaucedo@gmail.com",
     "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
   },
   "dependencies": {
     "geode.node-ids": ">=v1.23.3"
   },
+  "tags": [
+    "android",
+    "customization",
+    "enhancement",
+    "performance"
+  ],
   "resources": {
     "files": [
-      "about.md",
-      "changelog.md",
-      "support.md",
       "resources/shaders/*.vert",
       "resources/shaders/*.frag"
     ]
@@ -55,7 +57,7 @@
       "default": 0.0,
       "min": -2.0,
       "max": 2.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
     "contrast": {
@@ -64,7 +66,7 @@
       "default": 1.0,
       "min": 0.5,
       "max": 2.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
     "saturation": {
@@ -73,7 +75,7 @@
       "default": 1.0,
       "min": 0.0,
       "max": 2.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
     "gamma": {
@@ -82,7 +84,7 @@
       "default": 1.0,
       "min": 0.5,
       "max": 2.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
     "vignette": {
@@ -91,7 +93,7 @@
       "default": 0.0,
       "min": 0.0,
       "max": 1.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
     "sharpen": {
@@ -100,7 +102,7 @@
       "default": 0.0,
       "min": 0.0,
       "max": 1.0,
-      "control": { "slider": true },
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     }
   }
