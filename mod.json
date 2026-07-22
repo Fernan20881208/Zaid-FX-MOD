@@ -1,0 +1,99 @@
+{
+  "geode": "v5.7.1",
+  "gd": {
+    "android": "2.2081"
+  },
+  "id": "zaid.zaid-fx-mod",
+  "name": "Zaid-FX-MOD",
+  "version": "v0.1.0",
+  "developer": "Zaid",
+  "description": "Android post-processing and visual filter framework for Geometry Dash using Geode.",
+  "repository": "Fernan20881208/Zaid-FX-MOD",
+  "issues": {
+    "info": "Report Android device, GPU, Geode version and attach the latest crash log.",
+    "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
+  },
+  "dependencies": {
+    "geode.node-ids": ">=v1.23.3"
+  },
+  "resources": {
+    "files": [
+      "resources/shaders/*.vert",
+      "resources/shaders/*.frag"
+    ]
+  },
+  "settings": {
+    "general-title": {
+      "type": "title",
+      "name": "Zaid FX"
+    },
+    "enabled": {
+      "type": "bool",
+      "name": "Enable effects",
+      "description": "Master switch for the post-processing pipeline.",
+      "default": false
+    },
+    "preset": {
+      "type": "string",
+      "name": "Preset",
+      "description": "Select the base visual profile.",
+      "default": "Clean",
+      "one-of": ["Clean", "OLED", "Vibrant", "Cinematic", "RTX Fake", "Competitive"],
+      "enable-if": "enabled"
+    },
+    "exposure": {
+      "type": "float",
+      "name": "Exposure",
+      "default": 0.0,
+      "min": -2.0,
+      "max": 2.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    },
+    "contrast": {
+      "type": "float",
+      "name": "Contrast",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    },
+    "saturation": {
+      "type": "float",
+      "name": "Saturation",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 2.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    },
+    "gamma": {
+      "type": "float",
+      "name": "Gamma",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    },
+    "vignette": {
+      "type": "float",
+      "name": "Vignette",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    },
+    "sharpen": {
+      "type": "float",
+      "name": "Sharpen",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1.0,
+      "control": { "slider": true },
+      "enable-if": "enabled"
+    }
+  }
+}

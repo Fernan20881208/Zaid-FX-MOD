@@ -1,0 +1,11 @@
+/build*/
+/.cache/
+/.idea/
+/.vscode/
+*.geode
+*.so
+*.a
+*.o
+*.log
+compile_commands.json
+.DS_Store

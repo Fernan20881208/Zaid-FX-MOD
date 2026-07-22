@@ -1,0 +1,34 @@
+name: Build Android64
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Geode mod
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: v5.7.1
+          target: Android64
+          build-config: RelWithDebInfo
+          export-symbols: true
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zaid-FX-MOD-Android64
+          path: ${{ steps.build.outputs.build-output }}
+          if-no-files-found: error
