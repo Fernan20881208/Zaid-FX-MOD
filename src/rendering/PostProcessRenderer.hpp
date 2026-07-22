@@ -3,9 +3,7 @@
 #include "ShaderProgram.hpp"
 #include "../settings/Settings.hpp"
 
-#include <Geode/cocos/CCDirector.h>
-#include <Geode/cocos/misc_nodes/CCRenderTexture.h>
-#include <Geode/cocos/sprite_nodes/CCSprite.h>
+#include <Geode/cocos/platform/CCGL.h>
 
 #include <cstdint>
 #include <string>
@@ -26,35 +24,37 @@ public:
     void invalidatePipeline(std::string_view reason);
 
     [[nodiscard]] bool shouldRender() const;
-    [[nodiscard]] bool isCapturing() const;
     [[nodiscard]] bool isPipelineReady() const;
     [[nodiscard]] Settings const& settings() const;
 
-    bool beginCapture(cocos2d::CCDirector* director);
-    void endCaptureAndDraw(cocos2d::CCDirector* director);
+    // Called from CCEGLView::swapBuffers after Geometry Dash has finished
+    // drawing the frame and immediately before it is presented.
+    void processPresentedFrame();
 
 private:
     PostProcessRenderer() = default;
 
-    bool ensurePipeline(cocos2d::CCDirector* director);
-    bool rebuildPipeline(cocos2d::CCSize const& size);
+    bool ensurePipeline(int width, int height);
+    bool rebuildPipeline(int width, int height);
     void destroyPipeline();
-    void applyUniforms();
+    bool captureCurrentFramebuffer(int x, int y, int width, int height);
+    bool applyUniforms(int width, int height);
+    bool drawFullscreenQuad();
     void markSettingsChanged(std::string_view key, float value);
-    void logRenderStateOnce();
+    void logRenderStateOnce(GLint framebuffer, int width, int height);
 
     Settings m_settings;
     ShaderProgram m_shader;
-    cocos2d::CCRenderTexture* m_renderTexture = nullptr;
-    cocos2d::CCSprite* m_outputSprite = nullptr;
-    cocos2d::CCSize m_renderSize = { 0.0f, 0.0f };
+    GLuint m_captureTexture = 0;
+    int m_textureWidth = 0;
+    int m_textureHeight = 0;
 
     bool m_initialized = false;
-    bool m_capturing = false;
     bool m_pipelineDirty = true;
     bool m_uniformsDirty = true;
     int m_retryFrames = 0;
 
+    std::uint64_t m_frameCounter = 0;
     std::uint64_t m_settingsRevision = 0;
     std::uint64_t m_lastLoggedRenderRevision = static_cast<std::uint64_t>(-1);
 };
