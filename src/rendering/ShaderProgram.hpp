@@ -25,12 +25,15 @@ public:
     bool loadFromSource(std::string const& vertexSource, std::string const& fragmentSource);
 
     void use() const;
+    bool setInt(char const* uniformName, int value) const;
     bool setFloat(char const* uniformName, float value) const;
     bool setVec2(char const* uniformName, float x, float y) const;
     void reset();
 
     [[nodiscard]] cocos2d::CCGLProgram* get() const;
+    [[nodiscard]] unsigned int programID() const;
     [[nodiscard]] bool isLoaded() const;
+    [[nodiscard]] bool isValid() const;
 
 private:
     static std::string readTextFile(std::filesystem::path const& path);
