@@ -15,3 +15,4 @@ The project does not claim to provide real RTX or ray tracing. The planned “RT
 - Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
 - WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
 - Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
+- Source and issues: [GitHub repository](https://github.com/Fernan20881208/Zaid-FX-MOD)
