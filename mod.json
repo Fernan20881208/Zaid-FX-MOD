@@ -21,10 +21,10 @@
     "geode.node-ids": ">=v1.23.3"
   },
   "tags": [
-    "android",
     "customization",
     "enhancement",
-    "performance"
+    "performance",
+    "offline"
   ],
   "resources": {
     "files": [
