@@ -1,10 +1,14 @@
 # Zaid-FX-MOD
 
-Zaid-FX-MOD is an Android-focused visual effects framework for Geometry Dash and Geode.
+Zaid-FX-MOD is an Android-focused visual-effects framework for Geometry Dash and Geode.
 
-The project begins with safe color-grading controls and a reusable GLSL API. Future versions will capture the rendered scene into an off-screen framebuffer and apply an ordered post-processing chain before presentation.
+Version 0.2.0 captures the complete rendered frame into an off-screen texture and applies a live GLSL post-processing pass before displaying it. Exposure, brightness, contrast, saturation, gamma, vignette, sharpening and global effect intensity update while the game is running.
 
-The project does not claim to provide real RTX or ray tracing. The planned “RTX Fake” preset is a mobile-friendly visual style based on bloom, tone mapping, contrast and sharpening.
+The renderer uses one shared, sanitized settings state. Presets update the same Geode settings used by the sliders and shader, preventing duplicate configuration values from overriding manual changes.
+
+Temporary diagnostic logging can report slider output, renderer input, uniform updates and the final values used during rendering.
+
+The project does not claim to provide real RTX or ray tracing. The “RTX Fake” preset is a mobile-friendly visual style based on color grading, contrast and sharpening; bloom and other multipass effects remain planned.
 
 ## Developer
 
