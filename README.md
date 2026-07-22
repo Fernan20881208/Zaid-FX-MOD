@@ -55,7 +55,7 @@ The package should be produced under `build-android64`.
 - **WhatsApp:** [+52 33 4515 8805](https://wa.me/523345158805)
 - **Email:** [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
 
-These contact options are also included in `about.md`, which Geode displays on the mod information page.
+Inside Geode, the mod exposes Instagram as its homepage, GitHub as its source link, WhatsApp as its community link and the complete contact information in the Support tab.
 
 ## License
 
