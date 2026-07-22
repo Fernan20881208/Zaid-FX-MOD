@@ -7,7 +7,7 @@
   "name": "Zaid-FX-MOD",
   "version": "v0.2.0",
   "developer": "Zaid Navarro",
-  "description": "Live Android post-processing and visual filters for Geometry Dash using Geode.",
+  "description": "Final-frame Android post-processing and visual filters for Geometry Dash using Geode.",
   "links": {
     "source": "https://github.com/Fernan20881208/Zaid-FX-MOD",
     "homepage": "https://www.instagram.com/Zaid.nvr/",
@@ -30,6 +30,9 @@
     "files": [
       "resources/shaders/*.vert",
       "resources/shaders/*.frag"
+    ],
+    "sprites": [
+      "resources/ZaidFXLogo.png"
     ]
   },
   "settings": {
@@ -40,7 +43,7 @@
     "enabled": {
       "type": "bool",
       "name": "Enable effects",
-      "description": "Renders the complete game through the live post-processing pipeline.",
+      "description": "Processes the final framebuffer immediately before Android presents it.",
       "default": false
     },
     "preset": {
@@ -131,10 +134,17 @@
       "type": "title",
       "name": "Diagnostics"
     },
+    "debug-red-screen": {
+      "type": "bool",
+      "name": "Red framebuffer test",
+      "description": "Temporarily forces the final fullscreen quad to solid red. If this does not turn the complete menu or level red, the final-frame hook is not connected.",
+      "default": false,
+      "enable-if": "enabled"
+    },
     "debug-logging": {
       "type": "bool",
       "name": "Shader debug logging",
-      "description": "Temporarily logs slider values, renderer values, uniform updates and final frame values.",
+      "description": "Logs the render hook, GLSL program, framebuffer, capture texture, uniforms and fullscreen draw.",
       "default": true
     }
   }
