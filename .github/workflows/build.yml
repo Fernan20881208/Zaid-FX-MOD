@@ -15,19 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Geode mod
         id: build
         uses: geode-sdk/build-geode-mod@main
         with:
-          sdk: v5.7.1
+          sdk: latest
+          cli: latest
           target: Android64
-          build-config: RelWithDebInfo
+          build-config: Release
           export-symbols: true
 
       - name: Upload package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Zaid-FX-MOD-Android64
           path: ${{ steps.build.outputs.build-output }}
