@@ -25,11 +25,27 @@ jobs:
           cli: latest
           target: Android64
           build-config: Release
-          export-symbols: true
+          export-symbols: false
+
+      - name: Capture compiler diagnostics
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          cmake --build build --config Release --parallel 2>&1 | tee build.log
 
       - name: Upload package
+        if: success()
         uses: actions/upload-artifact@v7
         with:
           name: Zaid-FX-MOD-Android64
-          path: ${{ steps.build.outputs.build-output }}
+          path: ${{ steps.build.outputs.build-output }}/*.geode
           if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Zaid-FX-MOD-build-logs
+          path: build.log
+          if-no-files-found: warn
