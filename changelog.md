@@ -1,16 +1,18 @@
 # v0.2.0
 
-- Added a functional fullscreen post-processing pipeline around `CCDirector::drawScene`.
-- Connected every Geode slider to one authoritative renderer settings state.
-- Added immediate typed setting listeners for intensity, brightness, exposure, contrast, saturation, gamma, vignette and sharpen.
-- Updated all shader uniforms during every processed frame.
-- Added effect-intensity blending and brightness to the GLSL shader.
-- Corrected value ranges and clamping before values reach OpenGL.
-- Made presets update the real slider values and switch to `Custom` after manual edits.
-- Added temporary slider, renderer, uniform and final-frame diagnostic logs.
-- Added cached uniform lookup and missing-uniform validation.
-- Added safe fallback to normal rendering when the pipeline cannot be created.
-- Verified successful Android64 compilation and `.geode` packaging in GitHub Actions.
+- Moved post-processing to `CCEGLView::swapBuffers`, after the complete menu or gameplay frame has been rendered and immediately before Android presents it.
+- Copies the final bound framebuffer into a fullscreen texture with `glCopyTexSubImage2D`.
+- Draws the captured texture back to the same framebuffer with a clip-space GLSL quad.
+- Prevents the original unprocessed scene from being drawn over the result.
+- Restores the previous framebuffer, program, viewport, scissor, blending, depth, stencil, culling, textures, buffers, write masks and vertex-attribute state.
+- Added shader compilation and linking diagnostics with the final GLSL program ID.
+- Validates every uniform location and never writes to location `-1`.
+- Updates exposure, brightness, contrast, saturation, gamma, vignette, sharpen and global intensity every processed frame.
+- Added **Red framebuffer test** to force the complete screen to solid red and prove that the presentation pipeline is connected.
+- Connected **Enable effects** directly to the final-frame pass; disabling it immediately restores the original game output.
+- Added the official Zaid-FX-MOD logo to Geode and the menu button.
+- Added versioned GitHub Release automation and Geode Index submission instructions for future in-app updates.
+- Retained one authoritative settings state and live slider-to-uniform logging.
 
 # v0.1.0
 
