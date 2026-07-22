@@ -6,11 +6,16 @@
   "id": "zaid.zaid-fx-mod",
   "name": "Zaid-FX-MOD",
   "version": "v0.1.0",
-  "developer": "Zaid",
+  "developer": "Zaid Navarro",
   "description": "Android post-processing and visual filter framework for Geometry Dash using Geode.",
   "repository": "Fernan20881208/Zaid-FX-MOD",
+  "links": {
+    "source": "https://github.com/Fernan20881208/Zaid-FX-MOD",
+    "homepage": "https://www.instagram.com/Zaid.nvr/",
+    "community": "https://wa.me/523345158805"
+  },
   "issues": {
-    "info": "Report Android device, GPU, Geode version and attach the latest crash log.",
+    "info": "Report Android device, GPU, Geode version and attach the latest crash log. Contact: zaidnavarrosaucedo@gmail.com",
     "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
   },
   "dependencies": {
