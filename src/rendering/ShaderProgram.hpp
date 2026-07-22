@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Geode/Geode.hpp>
+#include <Geode/cocos/shaders/CCGLProgram.h>
 
 #include <filesystem>
 #include <string>
@@ -14,6 +14,8 @@ public:
 
     ShaderProgram(ShaderProgram const&) = delete;
     ShaderProgram& operator=(ShaderProgram const&) = delete;
+    ShaderProgram(ShaderProgram&&) = delete;
+    ShaderProgram& operator=(ShaderProgram&&) = delete;
 
     bool loadFromFiles(
         std::filesystem::path const& vertexPath,
@@ -23,6 +25,7 @@ public:
 
     void use() const;
     void setFloat(char const* uniformName, float value) const;
+    void setVec2(char const* uniformName, float x, float y) const;
     void reset();
 
     [[nodiscard]] cocos2d::CCGLProgram* get() const;
