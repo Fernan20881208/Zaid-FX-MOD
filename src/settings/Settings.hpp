@@ -7,6 +7,7 @@ namespace zaidfx {
 struct Settings final {
     bool enabled = false;
     bool debugLogging = true;
+    bool debugRedScreen = false;
     std::string preset = "Clean";
 
     float intensity = 1.0f;
