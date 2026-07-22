@@ -285,13 +285,13 @@ void PostProcessRenderer::destroyPipeline() {
     }
 
     m_shader.reset();
-    m_renderSize = { 0.0f, 0.0f };
+    m_renderSize = CCSizeMake(0.0f, 0.0f);
 }
 
 void PostProcessRenderer::applyUniforms() {
     auto* texture = m_renderTexture->getSprite()->getTexture();
-    auto const width = std::max(1u, texture->getPixelsWide());
-    auto const height = std::max(1u, texture->getPixelsHigh());
+    auto const width = std::max(1, static_cast<int>(texture->getPixelsWide()));
+    auto const height = std::max(1, static_cast<int>(texture->getPixelsHigh()));
 
     struct UniformValue {
         char const* uniform;
