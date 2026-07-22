@@ -1,11 +1,11 @@
 #ifdef GL_ES
-precision mediump float;
+precision highp float;
 #endif
 
 varying vec2 v_texCoord;
-varying vec4 v_fragmentColor;
 
 uniform sampler2D CC_Texture0;
+uniform float u_debugRed;
 uniform float u_intensity;
 uniform float u_brightness;
 uniform float u_exposure;
@@ -22,6 +22,11 @@ vec3 adjustSaturation(vec3 color, float saturation) {
 }
 
 void main() {
+    if (u_debugRed > 0.5) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        return;
+    }
+
     vec4 source = texture2D(CC_Texture0, v_texCoord);
     vec3 original = source.rgb;
     vec3 color = original;
@@ -37,8 +42,8 @@ void main() {
     }
 
     color *= exp2(clamp(u_exposure, -2.0, 2.0));
-    color += clamp(u_brightness, -1.0, 1.0);
-    color = (color - 0.5) * clamp(u_contrast, 0.25, 3.0) + 0.5;
+    color += vec3(clamp(u_brightness, -1.0, 1.0));
+    color = (color - vec3(0.5)) * clamp(u_contrast, 0.25, 3.0) + vec3(0.5);
     color = adjustSaturation(color, clamp(u_saturation, 0.0, 3.0));
     color = pow(max(color, vec3(0.0)), vec3(1.0 / clamp(u_gamma, 0.25, 3.0)));
 
@@ -47,8 +52,6 @@ void main() {
     float vignetteMask = smoothstep(0.35, 1.0, radialDistance);
     color *= 1.0 - vignetteMask * clamp(u_vignette, 0.0, 1.0);
 
-    float intensity = clamp(u_intensity, 0.0, 1.0);
-    color = mix(original, color, intensity);
-
-    gl_FragColor = vec4(clamp(color, 0.0, 1.0), source.a) * v_fragmentColor;
+    color = mix(original, color, clamp(u_intensity, 0.0, 1.0));
+    gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }
