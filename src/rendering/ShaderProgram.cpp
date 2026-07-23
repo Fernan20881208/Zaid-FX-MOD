@@ -17,7 +17,7 @@ ShaderProgram::~ShaderProgram() {
 
 std::string ShaderProgram::readTextFile(std::filesystem::path const& path) {
     auto result = geode::utils::file::readString(path);
-    if (result.isErr()) {
+    if (!result.isOk()) {
         log::error(
             "[ZaidFX] unable to read shader {}: {}",
             geode::utils::string::pathToString(path),
