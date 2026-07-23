@@ -5,6 +5,7 @@
 
 #include "rendering/PostProcessRenderer.hpp"
 
+#include <cmath>
 #include <optional>
 #include <string_view>
 
@@ -15,58 +16,115 @@ namespace {
 bool s_applyingPreset = false;
 
 struct PresetValues final {
+    char const* id;
     double intensity;
     double brightness;
     double exposure;
     double contrast;
     double saturation;
     double gamma;
+    double bloom;
     double vignette;
     double sharpen;
+    double chromaticAberration;
+    double tonemapping;
 };
 
 std::optional<PresetValues> presetValues(std::string_view preset) {
-    if (preset == "Clean") {
-        return PresetValues { 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.05 };
-    }
-    if (preset == "OLED") {
-        return PresetValues { 1.0, -0.03, 0.05, 1.20, 1.08, 0.92, 0.12, 0.15 };
-    }
-    if (preset == "Vibrant") {
-        return PresetValues { 1.0, 0.03, 0.10, 1.12, 1.45, 0.95, 0.05, 0.18 };
+    if (preset == "Default") {
+        return PresetValues { "Default", 1.00, 0.00, 0.00, 1.00, 1.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00 };
     }
     if (preset == "Cinematic") {
-        return PresetValues { 0.95, -0.02, -0.05, 1.25, 0.90, 1.05, 0.28, 0.10 };
+        return PresetValues { "Cinematic", 1.00, -0.05, -0.25, 1.35, 0.88, 1.05, 0.15, 0.35, 0.20, 0.06, 0.65 };
     }
-    if (preset == "RTX Fake") {
-        return PresetValues { 1.0, 0.02, 0.18, 1.30, 1.30, 0.92, 0.18, 0.42 };
+    if (preset == "Vibrant") {
+        return PresetValues { "Vibrant", 1.00, 0.12, 0.10, 1.10, 1.55, 0.95, 0.20, 0.05, 0.12, 0.02, 0.25 };
     }
-    if (preset == "Competitive") {
-        return PresetValues { 1.0, 0.02, 0.04, 1.12, 1.05, 1.0, 0.0, 0.55 };
+    if (preset == "Dark") {
+        return PresetValues { "Dark", 1.00, -0.12, -0.85, 1.45, 0.92, 1.08, 0.05, 0.22, 0.18, 0.01, 0.35 };
+    }
+    if (preset == "Retro") {
+        return PresetValues { "Retro", 1.00, -0.02, -0.15, 1.18, 0.78, 1.18, 0.08, 0.30, 0.05, 0.18, 0.55 };
+    }
+    if (preset == "RTX") {
+        return PresetValues { "RTX", 1.00, 0.08, 0.35, 1.42, 1.12, 0.94, 0.55, 0.12, 0.42, 0.03, 0.78 };
     }
     return std::nullopt;
 }
 
-void applyPreset(std::string_view preset) {
-    auto values = presetValues(preset);
+bool presetValueMatches(std::string_view key, double value) {
+    auto const selected = Mod::get()->getSettingValue<std::string>("preset");
+    auto const values = presetValues(selected);
     if (!values) {
+        return false;
+    }
+
+    double expected = value;
+    if (key == "effect-intensity") expected = values->intensity;
+    else if (key == "brightness") expected = values->brightness;
+    else if (key == "exposure") expected = values->exposure;
+    else if (key == "contrast") expected = values->contrast;
+    else if (key == "saturation") expected = values->saturation;
+    else if (key == "gamma") expected = values->gamma;
+    else if (key == "bloom") expected = values->bloom;
+    else if (key == "vignette") expected = values->vignette;
+    else if (key == "sharpen") expected = values->sharpen;
+    else if (key == "chromatic-aberration") expected = values->chromaticAberration;
+    else if (key == "tonemapping") expected = values->tonemapping;
+    else return false;
+
+    return std::fabs(expected - value) < 0.0001;
+}
+
+void assignPresetValue(std::string_view key, double value) {
+    Mod::get()->setSettingValue<double>(std::string(key), value);
+    zaidfx::PostProcessRenderer::get().setFloat(key, static_cast<float>(value));
+    log::info("[ZaidFX][preset] slider {} <- {:.4f}", key, value);
+}
+
+void applyPreset(std::string_view preset) {
+    auto const values = presetValues(preset);
+    if (!values) {
+        log::warn("[ZaidFX][preset] unknown preset text/id: {}", preset);
         return;
     }
 
-    auto* mod = Mod::get();
+    auto& renderer = zaidfx::PostProcessRenderer::get();
     s_applyingPreset = true;
 
-    mod->setSettingValue<double>("effect-intensity", values->intensity);
-    mod->setSettingValue<double>("brightness", values->brightness);
-    mod->setSettingValue<double>("exposure", values->exposure);
-    mod->setSettingValue<double>("contrast", values->contrast);
-    mod->setSettingValue<double>("saturation", values->saturation);
-    mod->setSettingValue<double>("gamma", values->gamma);
-    mod->setSettingValue<double>("vignette", values->vignette);
-    mod->setSettingValue<double>("sharpen", values->sharpen);
+    renderer.setString("preset", std::string(values->id));
+    log::info("[ZaidFX][preset] selected={} internal-id={}", preset, values->id);
+    log::info(
+        "[ZaidFX][preset] loaded values intensity={:.2f}, brightness={:.2f}, exposure={:.2f}, "
+        "contrast={:.2f}, saturation={:.2f}, gamma={:.2f}, bloom={:.2f}, vignette={:.2f}, "
+        "sharpen={:.2f}, chromatic-aberration={:.2f}, tonemapping={:.2f}",
+        values->intensity,
+        values->brightness,
+        values->exposure,
+        values->contrast,
+        values->saturation,
+        values->gamma,
+        values->bloom,
+        values->vignette,
+        values->sharpen,
+        values->chromaticAberration,
+        values->tonemapping
+    );
+
+    assignPresetValue("effect-intensity", values->intensity);
+    assignPresetValue("brightness", values->brightness);
+    assignPresetValue("exposure", values->exposure);
+    assignPresetValue("contrast", values->contrast);
+    assignPresetValue("saturation", values->saturation);
+    assignPresetValue("gamma", values->gamma);
+    assignPresetValue("bloom", values->bloom);
+    assignPresetValue("vignette", values->vignette);
+    assignPresetValue("sharpen", values->sharpen);
+    assignPresetValue("chromatic-aberration", values->chromaticAberration);
+    assignPresetValue("tonemapping", values->tonemapping);
 
     s_applyingPreset = false;
-    log::info("[ZaidFX][preset] applied {} to the live renderer settings", preset);
+    log::info("[ZaidFX][preset] shader refresh queued immediately for {}", values->id);
 }
 
 void markPresetCustom() {
@@ -77,13 +135,18 @@ void markPresetCustom() {
     auto* mod = Mod::get();
     if (mod->getSettingValue<std::string>("preset") != "Custom") {
         mod->setSettingValue<std::string>("preset", "Custom");
+        zaidfx::PostProcessRenderer::get().setString("preset", "Custom");
+        log::info("[ZaidFX][preset] manual slider change -> Custom");
     }
 }
 
 void handleSlider(std::string_view key, double value) {
     log::info("[ZaidFX][slider] {} generated {:.4f}", key, value);
     zaidfx::PostProcessRenderer::get().setFloat(key, static_cast<float>(value));
-    markPresetCustom();
+
+    if (!s_applyingPreset && !presetValueMatches(key, value)) {
+        markPresetCustom();
+    }
 }
 
 std::string statusText() {
@@ -98,7 +161,8 @@ std::string statusText() {
         "Preset: <cy>{}</c>\n\n"
         "Intensity: {:.2f}\nBrightness: {:.2f}\nExposure: {:.2f}\n"
         "Contrast: {:.2f}\nSaturation: {:.2f}\nGamma: {:.2f}\n"
-        "Vignette: {:.2f}\nSharpen: {:.2f}",
+        "Bloom: {:.2f}\nVignette: {:.2f}\nSharpen: {:.2f}\n"
+        "Chromatic aberration: {:.2f}\nTonemapping: {:.2f}",
         settings.enabled ? "g" : "r",
         settings.enabled ? "enabled" : "disabled",
         renderer.isPipelineReady() ? "g" : "y",
@@ -112,8 +176,11 @@ std::string statusText() {
         settings.contrast,
         settings.saturation,
         settings.gamma,
+        settings.bloom,
         settings.vignette,
-        settings.sharpen
+        settings.sharpen,
+        settings.chromaticAberration,
+        settings.tonemapping
     );
 }
 
@@ -134,45 +201,30 @@ void registerSettingListeners() {
     });
 
     listenForSettingChanges<std::string>("preset", [](std::string value) {
-        log::info("[ZaidFX][slider] preset generated {}", value);
+        log::info("[ZaidFX][preset] selector generated {}", value);
         zaidfx::PostProcessRenderer::get().setString("preset", value);
         if (value != "Custom") {
             applyPreset(value);
         }
     });
 
-    listenForSettingChanges<double>("effect-intensity", [](double value) {
-        handleSlider("effect-intensity", value);
-    });
-    listenForSettingChanges<double>("brightness", [](double value) {
-        handleSlider("brightness", value);
-    });
-    listenForSettingChanges<double>("exposure", [](double value) {
-        handleSlider("exposure", value);
-    });
-    listenForSettingChanges<double>("contrast", [](double value) {
-        handleSlider("contrast", value);
-    });
-    listenForSettingChanges<double>("saturation", [](double value) {
-        handleSlider("saturation", value);
-    });
-    listenForSettingChanges<double>("gamma", [](double value) {
-        handleSlider("gamma", value);
-    });
-    listenForSettingChanges<double>("vignette", [](double value) {
-        handleSlider("vignette", value);
-    });
-    listenForSettingChanges<double>("sharpen", [](double value) {
-        handleSlider("sharpen", value);
-    });
+    listenForSettingChanges<double>("effect-intensity", [](double value) { handleSlider("effect-intensity", value); });
+    listenForSettingChanges<double>("brightness", [](double value) { handleSlider("brightness", value); });
+    listenForSettingChanges<double>("exposure", [](double value) { handleSlider("exposure", value); });
+    listenForSettingChanges<double>("contrast", [](double value) { handleSlider("contrast", value); });
+    listenForSettingChanges<double>("saturation", [](double value) { handleSlider("saturation", value); });
+    listenForSettingChanges<double>("gamma", [](double value) { handleSlider("gamma", value); });
+    listenForSettingChanges<double>("bloom", [](double value) { handleSlider("bloom", value); });
+    listenForSettingChanges<double>("vignette", [](double value) { handleSlider("vignette", value); });
+    listenForSettingChanges<double>("sharpen", [](double value) { handleSlider("sharpen", value); });
+    listenForSettingChanges<double>("chromatic-aberration", [](double value) { handleSlider("chromatic-aberration", value); });
+    listenForSettingChanges<double>("tonemapping", [](double value) { handleSlider("tonemapping", value); });
 }
 
 } // namespace
 
 class $modify(ZaidFXEGLView, CCEGLView) {
     void swapBuffers() {
-        // Geometry Dash has already drawn the complete menu or gameplay frame.
-        // Process that exact framebuffer before the platform presents it.
         zaidfx::PostProcessRenderer::get().processPresentedFrame();
         CCEGLView::swapBuffers();
     }
@@ -192,6 +244,7 @@ class $modify(ZaidFXMenuLayer, MenuLayer) {
 
         auto* icon = CCSprite::createWithSpriteFrameName("ZaidFXLogo.png"_spr);
         if (!icon) {
+            log::warn("Zaid-FX-MOD logo missing; using safe fallback icon");
             icon = CCSprite::createWithSpriteFrameName("GJ_starBtn_001.png");
         }
         icon->setScale(0.25f);
@@ -216,5 +269,11 @@ class $modify(ZaidFXMenuLayer, MenuLayer) {
 $execute {
     zaidfx::PostProcessRenderer::get().initialize();
     registerSettingListeners();
-    log::info("Zaid-FX-MOD final-frame shader pipeline initialized on Android");
+
+    auto const selected = Mod::get()->getSettingValue<std::string>("preset");
+    if (selected != "Custom") {
+        applyPreset(selected);
+    }
+
+    log::info("Zaid-FX-MOD v0.2.1 preset and final-frame shader pipeline initialized on Android");
 }
