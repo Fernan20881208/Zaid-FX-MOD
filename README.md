@@ -8,15 +8,15 @@ Zaid-FX-MOD is an Android64 visual-effects mod for Geometry Dash built with Geod
 
 ## Version 0.4.0
 
-This release combines the work completed during the current development cycle:
+This release combines the current development cycle:
 
-- corrected preset application and persistence;
-- two-pass post-processing with a reduced-resolution lighting buffer;
-- restrained bloom and emissive lighting that preserve color instead of clipping the screen into magenta or yellow;
-- simulated ambient occlusion, reflections, HDR, local contrast, specular highlights, light rays, depth separation and sharpen;
+- synchronized preset application and persistence;
+- two-pass post-processing with a reduced-resolution lighting-data buffer;
+- a full-resolution source-first color pipeline that prevents blue or other unintended channel dominance;
+- stable bloom, emissive lighting, ambient occlusion, reflections, HDR, local contrast, specular highlights, light rays, depth separation and sharpen;
 - reactive lighting for gameplay events;
 - Low, Medium, High and Ultra quality levels;
-- an internal Android H.264/MP4 screen recorder with **Record**, **Stop**, **Save** and **Delete** actions;
+- a floating internal Android H.264/MP4 screen recorder with **Record**, **Stop**, **Save** and **Delete** actions;
 - removal of personal contact information, development-only controls and unused dependencies.
 
 ## Presets
@@ -24,13 +24,21 @@ This release combines the work completed during the current development cycle:
 - **Default** — disables post-processing and restores the original image.
 - **Glow** — bloom-focused profile with mild emissive lighting.
 - **ZaidLux** — balanced lighting, depth, highlights and restrained color grading.
-- **ZaidLux Neon** — stronger emissive and electric colors while retaining highlight compression.
+- **ZaidLux Neon** — stronger emissive and electric colors with bounded saturation.
 - **Cinematic** — darker contrast, stronger ambient depth and controlled saturation.
-- **Cyberpunk** — cyan/magenta-biased lighting and stronger reflections.
+- **Cyberpunk** — intentional cyan/magenta styling without replacing the base image.
 - **ZaidLux Performance** — lower-cost profile for weaker devices.
 - **Custom** — selected automatically after manually changing a control.
 
 Preset values, toggles, quality and the custom preset are saved through Geode settings. The renderer and settings interface use the same configuration state.
+
+## Neutral output and pass-through testing
+
+The final shader always begins with the untouched full-resolution framebuffer. The reduced lighting texture contains only additive light in RGB and ambient occlusion in alpha; it is never used as a replacement for the scene color.
+
+Exposure, contrast, saturation, gamma, temperature, tint, highlights and shadows map their midpoint values to exact neutral operations. Setting **Effect Intensity** to `0` activates an exact pass-through path that outputs the captured framebuffer without color modification. Disabling all effects bypasses post-processing entirely.
+
+Local contrast, depth blur and sharpen derive their detail samples from the original framebuffer rather than from bloom or emissive data. The renderer also blocks re-entrant processing so the shader cannot be applied twice during one presented frame.
 
 ## Effects
 
@@ -38,20 +46,28 @@ The settings are organized into Bloom, Emissive Lighting, Ambient Occlusion, Ref
 
 Expensive effects are skipped when disabled. Render targets and shaders are reused instead of being recreated every frame. The selected quality controls the reduced lighting-buffer resolution and shader sample count.
 
-## Internal recorder
+## Floating internal recorder
 
-A **REC** button appears in the main menu.
+A small **REC** overlay appears in a safe top-right position in the main menu, level browser, level selector and gameplay. It is attached independently from normal menu layouts, so it does not move, resize or deform Geometry Dash buttons.
+
+- **REC** — inactive and ready to start.
+- **STOP** — recording; the button uses a subtle pulse.
+- **SAVE** — a temporary MP4 is ready to keep or delete.
+
+The overlay uses built-in Geometry Dash button resources and has a text fallback if the preferred sprite cannot be created.
 
 1. Press **REC** and confirm recording.
 2. Play normally; the recorder captures the final processed image.
-3. Return to the menu and press **STOP**.
+3. Press **STOP** from any supported overlay.
 4. Choose **Save** to keep the MP4 or **Delete** to discard it.
 
 Saved files are placed in the mod save directory under `recordings`. The current implementation records video only; game audio is not included. Recording resources are not allocated until recording begins.
 
 ## Rendering architecture
 
-The mod hooks `CCEGLView::swapBuffers` through Geode. It copies the completed framebuffer to a reusable texture, renders lighting effects into a reduced-resolution framebuffer, then performs the final HDR, color, detail and finishing pass back to the presented framebuffer. OpenGL state is captured and restored around the operation.
+The mod hooks `CCEGLView::swapBuffers` through Geode. It copies the completed framebuffer to a reusable full-resolution RGBA texture. Optional lighting effects are evaluated into a reduced-resolution RGBA target where RGB contains additive lighting and alpha contains ambient occlusion. The final pass starts from the original full-resolution texture, combines the optional lighting data, applies the enabled finishing stages and writes back to the presented framebuffer.
+
+OpenGL program, framebuffer, texture, viewport, blend, depth, stencil, scissor, color mask and vertex-attribute state are captured and restored around the operation. Bounded debug logs record the active preset, framebuffer, target sizes and key color uniforms when the configuration changes.
 
 ZaidLux uses stable screen-space approximations. It is not hardware ray tracing and does not have access to a traditional per-object depth buffer or material system.
 
@@ -62,7 +78,7 @@ ZaidLux uses stable screen-space approximations. It is not hardware ray tracing 
 - Device GPU support and performance vary
 - Screen-space category masks for player, objects and particles are approximations
 - The recorder currently produces video-only MP4 files
-- Shader behavior and MP4 playback still require testing on real Android devices
+- Final visual behavior and MP4 playback should be tested on real Android devices
 
 ## Building
 
@@ -73,7 +89,7 @@ geode sdk install-binaries -p android64
 geode build -p android64 --config Release
 ```
 
-GitHub Actions compiles Android64 and uploads the generated `.geode` package. A successful push to `main` creates a versioned GitHub Release using `release-notes.md`.
+GitHub Actions validates release metadata, compiles Android64 and uploads the generated `.geode` package. A successful push to `main` creates a versioned GitHub Release using `release-notes.md`.
 
 ## Releases and Index submission
 
