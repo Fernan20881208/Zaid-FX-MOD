@@ -124,9 +124,18 @@ bool PostProcessRenderer::applyFinalUniforms(int width, int height) {
     ) && success;
     success = m_finalShader.setFloat("u_time", m_time) && success;
 
+    auto const intensity = normalized(m_settings, FloatParam::EffectIntensity);
+    success = set4(
+        "u_pipelineFlags",
+        m_settings.hasLightingEffects() ? 1.0f : 0.0f,
+        m_settings.hasFinalEffects() ? 1.0f : 0.0f,
+        intensity <= 0.0001f ? 1.0f : 0.0f,
+        0.0f
+    ) && success;
+
     success = set4(
         "u_master",
-        normalized(m_settings, FloatParam::EffectIntensity),
+        intensity,
         static_cast<float>(m_settings.qualityLevel()) / 3.0f,
         std::clamp(m_reactivePulse, 0.0f, 1.0f),
         std::clamp(m_reactiveFlash, 0.0f, 0.35f)
