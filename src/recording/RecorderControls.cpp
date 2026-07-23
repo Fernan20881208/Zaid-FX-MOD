@@ -2,6 +2,8 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/binding/CCMenuItemSpriteExtra.hpp>
+#include <Geode/binding/FLAlertLayer.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 
 using namespace geode::prelude;
