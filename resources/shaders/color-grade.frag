@@ -5,7 +5,6 @@ precision highp float;
 varying vec2 v_texCoord;
 
 uniform sampler2D CC_Texture0;
-uniform float u_debugRed;
 uniform float u_intensity;
 uniform float u_brightness;
 uniform float u_exposure;
@@ -43,14 +42,15 @@ vec3 chromaticSample(vec2 uv, float amount) {
 }
 
 void main() {
-    if (u_debugRed > 0.5) {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        return;
-    }
-
     vec4 source = texture2D(CC_Texture0, v_texCoord);
     vec3 original = source.rgb;
-    vec3 color = mix(original, chromaticSample(v_texCoord, clamp(u_chromaticAberration, 0.0, 1.0)), clamp(u_chromaticAberration, 0.0, 1.0));
+
+    float chromaticAmount = clamp(u_chromaticAberration, 0.0, 1.0);
+    vec3 color = mix(
+        original,
+        chromaticSample(v_texCoord, chromaticAmount),
+        chromaticAmount
+    );
 
     float sharpenAmount = clamp(u_sharpen, 0.0, 1.0);
     vec3 north = texture2D(CC_Texture0, v_texCoord + vec2(0.0, u_texelSize.y)).rgb;
@@ -63,11 +63,11 @@ void main() {
         color = mix(color, sharpened, sharpenAmount);
     }
 
-    float bloomAmount = clamp(u_bloom, 0.0, 1.0);
-    if (bloomAmount > 0.001) {
+    float glowAmount = clamp(u_bloom, 0.0, 1.0);
+    if (glowAmount > 0.001) {
         vec3 blur = (north + south + east + west) * 0.25;
         vec3 highlights = max(blur - vec3(0.65), vec3(0.0));
-        color += highlights * bloomAmount * 2.5;
+        color += highlights * glowAmount * 2.5;
     }
 
     color *= exp2(clamp(u_exposure, -2.0, 2.0));
@@ -83,5 +83,5 @@ void main() {
     color *= 1.0 - vignetteMask * clamp(u_vignette, 0.0, 1.0);
 
     color = mix(original, color, clamp(u_intensity, 0.0, 1.0));
-    gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+    gl_FragColor = vec4(clamp(color, 0.0, 1.0), source.a);
 }
