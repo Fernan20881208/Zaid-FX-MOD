@@ -33,8 +33,20 @@ jobs:
         shell: bash
         run: |
           set +e
-          cmake --build build-android64 --config Release --parallel 2 > build-diagnostics.log 2>&1
-          STATUS=$?
+          : > build-diagnostics.log
+          mapfile -t CACHES < <(find . -type f -name CMakeCache.txt -print)
+          printf 'Configured CMake trees:\n' >> build-diagnostics.log
+          printf '%s\n' "${CACHES[@]}" >> build-diagnostics.log
+          STATUS=1
+          for CACHE in "${CACHES[@]}"; do
+            BUILD_DIR="$(dirname "$CACHE")"
+            printf '\n===== cmake --build %s =====\n' "$BUILD_DIR" >> build-diagnostics.log
+            cmake --build "$BUILD_DIR" --config Release --parallel 2 >> build-diagnostics.log 2>&1
+            CURRENT=$?
+            if [ "$CURRENT" -eq 0 ]; then
+              STATUS=0
+            fi
+          done
           echo "diagnostic-build-status=$STATUS" >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
