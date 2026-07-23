@@ -228,9 +228,9 @@ DisplayModeChoice chooseDisplayMode(JNIEnv* env, jobject display, float requeste
         auto const sameResolution =
             currentWidth > 0 && currentHeight > 0 &&
             width == currentWidth && height == currentHeight;
-        auto const resolutionPenalty = sameResolution ? 0.0f : 10000.0f;
         auto const rateDifference = std::fabs(refreshRate - requestedRate);
-        auto const score = resolutionPenalty + rateDifference;
+        auto const resolutionTieBreaker = sameResolution ? 0.0f : 1.0f;
+        auto const score = rateDifference * 1000.0f + resolutionTieBreaker;
 
         if (!choice.valid || score < bestScore) {
             choice = { id, refreshRate, width, height, true };
