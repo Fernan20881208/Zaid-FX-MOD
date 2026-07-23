@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          geode build -p android64 --config Release > build-diagnostics.log 2>&1
+          cmake --build build-android64 --config Release --parallel 2 > build-diagnostics.log 2>&1
           STATUS=$?
           echo "diagnostic-build-status=$STATUS" >> "$GITHUB_STEP_SUMMARY"
           exit 0
