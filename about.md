@@ -1,19 +1,21 @@
-# Zaid-FX-MOD
+# Zaid-FX-MOD v0.4.0 — ZaidLux
 
-Zaid-FX-MOD is an Android64 visual-effects mod for Geometry Dash built with Geode. It applies the **ZaidLux** final-frame post-processing pipeline without changing gameplay physics, hitboxes or level data.
+Zaid-FX-MOD applies configurable visual post-processing to Geometry Dash on Android64 through Geode. The mod is visual only and does not modify physics, hitboxes, level data or gameplay logic.
 
-## Included in v0.4.0
+## Corrected rendering pipeline
 
-- Bloom and emissive lighting with highlight thresholds
-- Simulated ambient occlusion and reflections
-- Fake HDR and complete color grading
-- Local contrast, specular highlights, light rays, depth separation and sharpen
-- Reactive lighting for gameplay events
-- Low, Medium, High and Ultra quality levels
-- Default, Glow, ZaidLux, ZaidLux Neon, Cinematic, Cyberpunk and ZaidLux Performance presets
-- Persistent custom settings and custom preset storage
-- Internal H.264/MP4 video recorder with save and delete choices
+The completed game frame is copied into a full-resolution RGBA texture immediately before presentation. Optional lighting effects are rendered into a separate reduced-resolution target where RGB stores additive lighting and alpha stores ambient occlusion. The final shader always begins from the untouched full-resolution framebuffer, then combines only the enabled effects.
 
-The effects use screen-space approximations and are not hardware ray tracing. The recorder currently captures video without game audio.
+Neutral midpoint values for exposure, contrast, saturation, gamma, temperature, tint, highlights and shadows preserve the original image. Setting Effect Intensity to zero activates an exact pass-through path. A re-entry guard prevents the post-process shader from being applied twice to the same presented frame.
 
-For bug reports, use the GitHub Issues link and include your device, GPU, Android, Geometry Dash and Geode versions, selected preset and quality, and relevant logs.
+## Presets
+
+Default, Glow, ZaidLux, ZaidLux Neon, Cinematic, Cyberpunk and ZaidLux Performance are included. Manual changes switch the profile to Custom while preserving all values.
+
+## Floating recorder
+
+The internal video recorder appears as a floating top-right overlay in the main menu, level browser, level selector and gameplay. It does not participate in the normal menu layout. REC starts capture, STOP finalizes it, and SAVE lets the user keep or delete the temporary MP4.
+
+The recorder currently captures H.264 video without game audio. Saved files are stored under the mod save directory in `recordings`.
+
+For bug reports, use the repository Issues page and include device, GPU, Android, Geometry Dash and Geode versions, selected preset and quality, and relevant logs.
