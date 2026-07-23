@@ -72,6 +72,9 @@ private:
 
     bool m_initialized = false;
     bool m_pipelineDirty = true;
+    bool m_processingFrame = false;
+    bool m_loggedPipelineState = false;
+    bool m_loggedReentry = false;
     int m_retryFrames = 0;
 
     float m_time = 0.0f;
