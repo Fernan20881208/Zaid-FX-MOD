@@ -159,7 +159,12 @@ $execute {
     renderer.initialize();
     registerSettingListeners();
 
-    auto const selected = Mod::get()->getSettingValue<std::string>("preset");
+    auto selected = Mod::get()->getSettingValue<std::string>("preset");
+    if (selected == "RTX") {
+        selected = "Glow";
+        Mod::get()->setSettingValue<std::string>("preset", selected);
+    }
+
     if (selected != "Custom") {
         applyPreset(selected);
     }
