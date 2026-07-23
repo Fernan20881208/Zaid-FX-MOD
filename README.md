@@ -1,85 +1,46 @@
 # Zaid-FX-MOD
 
 <p align="center">
-  <img src="logo.png" width="220" alt="Zaid-FX-MOD official logo">
+  <img src="logo.png" width="220" alt="Zaid-FX-MOD logo">
 </p>
 
-Android-first final-frame post-processing and visual presets for Geometry Dash using Geode.
+Zaid-FX-MOD adds configurable color grading and lightweight screen effects to Geometry Dash on Android through Geode.
 
-> **v0.2.1:** fixes preset application, adds lightweight bloom, chromatic aberration and tone mapping, and replaces the previous artwork with the exact user-provided image as the official mod icon.
+## Features
 
-## Presets
+- Brightness, exposure, contrast, saturation and gamma controls
+- Vignette, sharpening and chromatic aberration
+- Lightweight highlight glow and tone mapping
+- Adjustable effect intensity
+- Default, Cinematic, Vibrant, Dark, Retro and Glow presets
 
-Changing the preset now immediately runs one central `applyPreset(presetId)` operation. It loads every value, writes the Geode settings, updates the visible slider values, updates the active renderer state and queues the new uniforms for the next presented frame.
+Changing an individual slider switches the selected preset to **Custom**. Disabling the mod bypasses the post-processing pass immediately.
 
-Available profiles:
+## How it works
 
-- **Default:** neutral output.
-- **Cinematic:** stronger contrast, slightly reduced saturation, vignette and tone mapping.
-- **Vibrant:** brighter image with stronger saturation.
-- **Dark:** reduced exposure with stronger contrast.
-- **Retro:** reduced saturation, vignette and chromatic aberration.
-- **RTX:** bloom, sharpening, bright highlights and stronger tone mapping. This is a stylized post-processing profile, not hardware ray tracing.
+The mod hooks `CCEGLView::swapBuffers` through Geode. Immediately before Android presents a frame, the current framebuffer is copied to a texture and drawn back through a single fullscreen shader pass.
 
-Moving any numeric slider after a preset is applied changes the preset label to **Custom** without disabling the effects.
+The renderer preserves and restores the OpenGL state it changes. It does not modify gameplay logic, physics, hitboxes or level data.
 
-## Live visual controls
+## Limitations
 
-Every control is sent to the shader on every processed frame:
+- Android only
+- The highlight glow is a lightweight single-pass approximation, not a full multi-pass bloom implementation
+- The Glow preset is a color-grading profile; it does not provide ray tracing
+- Results and performance depend on the device GPU and screen resolution
 
-- Effect intensity: `u_intensity`
-- Brightness: `u_brightness`
-- Exposure: `u_exposure`
-- Contrast: `u_contrast`
-- Saturation: `u_saturation`
-- Gamma: `u_gamma`
-- Bloom: `u_bloom`
-- Vignette: `u_vignette`
-- Sharpen: `u_sharpen`
-- Chromatic aberration: `u_chromaticAberration`
-- Tonemapping: `u_tonemapping`
-- Pixel size: `u_texelSize`
-- Red framebuffer test: `u_debugRed`
+## Building
 
-## Final-frame rendering
-
-The effect continues to run from `CCEGLView::swapBuffers`, after Geometry Dash completes the menu or gameplay frame and immediately before Android presents it. The final framebuffer is copied into a texture and drawn back through a fullscreen GLSL quad.
-
-## Official logo
-
-The repository root `logo.png` and the in-game `ZaidFXLogo.png` sprite are derived directly from the image supplied by Zaid Navarro. The image is center-cropped to a square without stretching. The in-game button retains a safe Geometry Dash fallback if the texture cannot be loaded.
-
-## Diagnostics
-
-The temporary debug logs record:
-
-- selected preset and internal ID,
-- all loaded preset values,
-- each slider assignment,
-- renderer values,
-- every uniform update,
-- shader refresh confirmation,
-- framebuffer, texture, program and fullscreen-quad state.
-
-## Updates inside Geode
-
-Automatic in-app updates require the mod's first approved submission to the official Geode Index. GitHub releases are versioned automatically after a successful merge into `main`.
-
-## Developer and contact
-
-**Zaid Navarro**
-
-- Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
-- WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
-- Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
-- Source code and issues: [Fernan20881208/Zaid-FX-MOD](https://github.com/Fernan20881208/Zaid-FX-MOD)
-
-## Build from source
+Install the Geode CLI, Android SDK dependencies and Android64 binaries, then run:
 
 ```bash
 geode sdk install-binaries -p android64
 geode build -p android64
 ```
+
+## Reporting problems
+
+Use the repository's GitHub Issues page. Include the device model, GPU, Android version, Geometry Dash version, Geode version and latest crash log when relevant.
 
 ## License
 
