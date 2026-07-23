@@ -17,6 +17,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate release metadata
+        shell: bash
+        run: |
+          MOD_VERSION="$(jq -r '.version' mod.json)"
+          CMAKE_VERSION="v$(sed -nE 's/^project\(ZaidFXMod VERSION ([0-9]+\.[0-9]+\.[0-9]+)\)$/\1/p' CMakeLists.txt)"
+
+          test -n "$MOD_VERSION"
+          test "$MOD_VERSION" = "$CMAKE_VERSION"
+          grep -Fq "$MOD_VERSION" release-notes.md
+          grep -Fq "$MOD_VERSION" changelog.md
+
       - name: Build Geode mod
         id: build
         uses: geode-sdk/build-geode-mod@main
@@ -52,5 +63,5 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "Zaid-FX-MOD $VERSION" \
-            --notes-file changelog.md \
+            --notes-file release-notes.md \
             --latest

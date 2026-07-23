@@ -1,12 +1,20 @@
-# Support and contact
+# Support
 
-Zaid-FX-MOD is developed by **Zaid Navarro**.
+Report bugs, recorder failures and compatibility problems through the repository's GitHub Issues page.
 
-For questions, compatibility reports or development contact, use any of these options:
+Please include:
 
-- Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
-- WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
-- Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
-- GitHub issues: [Report a problem](https://github.com/Fernan20881208/Zaid-FX-MOD/issues)
+- Device model and GPU
+- Android version
+- Geometry Dash version
+- Geode version
+- Installed Zaid-FX-MOD version
+- Selected preset and quality level
+- Whether the internal recorder was active
+- Steps to reproduce the problem
+- Latest crash log or Geode log when relevant
+- A screenshot or short sample video when the issue is visual
 
-When reporting a rendering problem, include your device model, GPU, Android version, Geometry Dash version, Geode version and the latest log.
+For recorder issues, also state whether the failure happened while starting, recording, stopping, saving, deleting or playing the generated MP4.
+
+Do not post passwords, access tokens, phone numbers, private account information, private file paths or other sensitive data in an issue.
