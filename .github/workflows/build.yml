@@ -27,21 +27,6 @@ jobs:
           build-config: Release
           export-symbols: false
 
-      - name: Capture compiler diagnostics
-        if: failure()
-        shell: bash
-        run: |
-          mkdir -p diagnostics
-          cmake --build build --config Release --parallel 1 --verbose 2>&1 | tee diagnostics/build.log || true
-
-      - name: Upload compiler diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: Zaid-FX-MOD-final-frame-diagnostics
-          path: diagnostics/build.log
-          if-no-files-found: error
-
       - name: Upload package
         uses: actions/upload-artifact@v7
         with:
