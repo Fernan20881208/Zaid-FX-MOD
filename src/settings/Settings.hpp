@@ -1,14 +1,9 @@
 #pragma once
 
-#include <string>
-
 namespace zaidfx {
 
 struct Settings final {
     bool enabled = false;
-    bool debugLogging = true;
-    bool debugRedScreen = false;
-    std::string preset = "Default";
 
     float intensity = 1.0f;
     float brightness = 0.0f;
