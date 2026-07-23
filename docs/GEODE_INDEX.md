@@ -1,40 +1,36 @@
 # Geode Index publication
 
-Automatic updates inside Geode are provided by the official Geode Index. The index does not discover GitHub releases automatically; the developer must authenticate once and submit the first release.
+The previous Geode Index review explicitly requested that this mod not be resubmitted. Do not submit another package without first contacting Index staff and receiving confirmation that a new review is appropriate.
 
-## Initial submission
+## Current state
 
-After `v0.2.0` is published and its `.geode` file is attached to GitHub Releases:
+The consolidated v0.4.0 source includes the ZaidLux visual pipeline, synchronized presets, privacy cleanup, documentation and internal video recorder. A successful GitHub Actions build verifies compilation and packaging only; it does not prove device compatibility or satisfy the Index review requirements.
+
+## Preparation checklist
+
+1. Build the exact source commit through GitHub Actions.
+2. Install the generated `.geode` artifact on supported Android64 devices.
+3. Complete the device tests listed in `ROADMAP.md`.
+4. Confirm `mod.json`, `CMakeLists.txt`, `release-notes.md`, `changelog.md`, `README.md` and `about.md` describe the same version.
+5. Merge only the tested commit into `main`.
+6. Let the workflow publish a new immutable GitHub Release and `.geode` asset.
+7. Confirm the release asset corresponds exactly to the reviewed source commit.
+8. Keep private information, credentials, tokens and local paths out of the source tree and issue reports.
+9. Contact Index staff and obtain explicit permission before another submission attempt.
+
+## Commands
+
+Only after Index staff confirms that resubmission is allowed:
 
 ```bash
 geode index login
 geode index mods create
 ```
 
-Use the direct release asset URL for `zaid.zaid-fx-mod.geode` when prompted.
-
-An index administrator must approve the initial submission. Once approved, Zaid-FX-MOD appears in Geode's Download section and installed users receive update notifications directly in Geode.
-
-## Future versions
-
-For each update:
-
-1. Increase `version` in `mod.json`.
-2. Create a new GitHub Release without replacing an older package.
-3. Run:
+For later approved versions:
 
 ```bash
 geode index mods update
 ```
 
-The `.geode` file for an existing version must never be replaced because the index stores its checksum.
-
-## Current repository preparation
-
-- Public source repository.
-- MIT license.
-- Root `logo.png`.
-- `about.md`, `support.md` and `changelog.md`.
-- Versioned GitHub Releases with a direct `.geode` asset.
-- Geometry Dash and Geode version metadata.
-- Android64 build validation.
+Use the direct URL of the versioned GitHub Release asset when prompted. Never replace an asset for an existing version because published package checksums must remain stable.

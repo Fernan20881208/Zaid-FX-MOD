@@ -1,85 +1,87 @@
 # Zaid-FX-MOD
 
 <p align="center">
-  <img src="logo.png" width="220" alt="Zaid-FX-MOD official logo">
+  <img src="logo.png" width="220" alt="Zaid-FX-MOD logo">
 </p>
 
-Android-first final-frame post-processing and visual presets for Geometry Dash using Geode.
+Zaid-FX-MOD is an Android64 visual-effects mod for Geometry Dash built with Geode. It captures the final game frame immediately before presentation and applies the **ZaidLux** screen-space lighting pipeline without changing physics, hitboxes, level data or gameplay logic.
 
-> **v0.2.1:** fixes preset application, adds lightweight bloom, chromatic aberration and tone mapping, and replaces the previous artwork with the exact user-provided image as the official mod icon.
+## Version 0.4.0
+
+This release combines the work completed during the current development cycle:
+
+- corrected preset application and persistence;
+- two-pass post-processing with a reduced-resolution lighting buffer;
+- restrained bloom and emissive lighting that preserve color instead of clipping the screen into magenta or yellow;
+- simulated ambient occlusion, reflections, HDR, local contrast, specular highlights, light rays, depth separation and sharpen;
+- reactive lighting for gameplay events;
+- Low, Medium, High and Ultra quality levels;
+- an internal Android H.264/MP4 screen recorder with **Record**, **Stop**, **Save** and **Delete** actions;
+- removal of personal contact information, development-only controls and unused dependencies.
 
 ## Presets
 
-Changing the preset now immediately runs one central `applyPreset(presetId)` operation. It loads every value, writes the Geode settings, updates the visible slider values, updates the active renderer state and queues the new uniforms for the next presented frame.
+- **Default** — disables post-processing and restores the original image.
+- **Glow** — bloom-focused profile with mild emissive lighting.
+- **ZaidLux** — balanced lighting, depth, highlights and restrained color grading.
+- **ZaidLux Neon** — stronger emissive and electric colors while retaining highlight compression.
+- **Cinematic** — darker contrast, stronger ambient depth and controlled saturation.
+- **Cyberpunk** — cyan/magenta-biased lighting and stronger reflections.
+- **ZaidLux Performance** — lower-cost profile for weaker devices.
+- **Custom** — selected automatically after manually changing a control.
 
-Available profiles:
+Preset values, toggles, quality and the custom preset are saved through Geode settings. The renderer and settings interface use the same configuration state.
 
-- **Default:** neutral output.
-- **Cinematic:** stronger contrast, slightly reduced saturation, vignette and tone mapping.
-- **Vibrant:** brighter image with stronger saturation.
-- **Dark:** reduced exposure with stronger contrast.
-- **Retro:** reduced saturation, vignette and chromatic aberration.
-- **RTX:** bloom, sharpening, bright highlights and stronger tone mapping. This is a stylized post-processing profile, not hardware ray tracing.
+## Effects
 
-Moving any numeric slider after a preset is applied changes the preset label to **Custom** without disabling the effects.
+The settings are organized into Bloom, Emissive Lighting, Ambient Occlusion, Reflections, HDR, Color Grading, Local Contrast, Specular, Light Rays, Depth Blur, Sharpen, Reactive Lighting and Performance sections.
 
-## Live visual controls
+Expensive effects are skipped when disabled. Render targets and shaders are reused instead of being recreated every frame. The selected quality controls the reduced lighting-buffer resolution and shader sample count.
 
-Every control is sent to the shader on every processed frame:
+## Internal recorder
 
-- Effect intensity: `u_intensity`
-- Brightness: `u_brightness`
-- Exposure: `u_exposure`
-- Contrast: `u_contrast`
-- Saturation: `u_saturation`
-- Gamma: `u_gamma`
-- Bloom: `u_bloom`
-- Vignette: `u_vignette`
-- Sharpen: `u_sharpen`
-- Chromatic aberration: `u_chromaticAberration`
-- Tonemapping: `u_tonemapping`
-- Pixel size: `u_texelSize`
-- Red framebuffer test: `u_debugRed`
+A **REC** button appears in the main menu.
 
-## Final-frame rendering
+1. Press **REC** and confirm recording.
+2. Play normally; the recorder captures the final processed image.
+3. Return to the menu and press **STOP**.
+4. Choose **Save** to keep the MP4 or **Delete** to discard it.
 
-The effect continues to run from `CCEGLView::swapBuffers`, after Geometry Dash completes the menu or gameplay frame and immediately before Android presents it. The final framebuffer is copied into a texture and drawn back through a fullscreen GLSL quad.
+Saved files are placed in the mod save directory under `recordings`. The current implementation records video only; game audio is not included. Recording resources are not allocated until recording begins.
 
-## Official logo
+## Rendering architecture
 
-The repository root `logo.png` and the in-game `ZaidFXLogo.png` sprite are derived directly from the image supplied by Zaid Navarro. The image is center-cropped to a square without stretching. The in-game button retains a safe Geometry Dash fallback if the texture cannot be loaded.
+The mod hooks `CCEGLView::swapBuffers` through Geode. It copies the completed framebuffer to a reusable texture, renders lighting effects into a reduced-resolution framebuffer, then performs the final HDR, color, detail and finishing pass back to the presented framebuffer. OpenGL state is captured and restored around the operation.
 
-## Diagnostics
+ZaidLux uses stable screen-space approximations. It is not hardware ray tracing and does not have access to a traditional per-object depth buffer or material system.
 
-The temporary debug logs record:
+## Compatibility and limitations
 
-- selected preset and internal ID,
-- all loaded preset values,
-- each slider assignment,
-- renderer values,
-- every uniform update,
-- shader refresh confirmation,
-- framebuffer, texture, program and fullscreen-quad state.
+- Geometry Dash 2.2081 on Android64
+- Geode 5.7.1
+- Device GPU support and performance vary
+- Screen-space category masks for player, objects and particles are approximations
+- The recorder currently produces video-only MP4 files
+- Shader behavior and MP4 playback still require testing on real Android devices
 
-## Updates inside Geode
+## Building
 
-Automatic in-app updates require the mod's first approved submission to the official Geode Index. GitHub releases are versioned automatically after a successful merge into `main`.
-
-## Developer and contact
-
-**Zaid Navarro**
-
-- Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
-- WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
-- Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
-- Source code and issues: [Fernan20881208/Zaid-FX-MOD](https://github.com/Fernan20881208/Zaid-FX-MOD)
-
-## Build from source
+Install the Geode CLI and Android64 binaries, then run:
 
 ```bash
 geode sdk install-binaries -p android64
-geode build -p android64
+geode build -p android64 --config Release
 ```
+
+GitHub Actions compiles Android64 and uploads the generated `.geode` package. A successful push to `main` creates a versioned GitHub Release using `release-notes.md`.
+
+## Releases and Index submission
+
+See [`docs/RELEASES.md`](docs/RELEASES.md) for the release workflow. The previous Geode Index review explicitly requested that the mod not be resubmitted. Contact Index staff and receive permission before attempting another submission.
+
+## Reporting problems
+
+Use GitHub Issues and include the device model, GPU, Android version, Geometry Dash version, Geode version, selected preset and quality, steps to reproduce, and the latest crash or Geode log when relevant. Do not post private contact information, credentials or tokens.
 
 ## License
 

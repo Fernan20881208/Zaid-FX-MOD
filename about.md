@@ -1,31 +1,19 @@
 # Zaid-FX-MOD
 
-Zaid-FX-MOD is an Android-focused final-frame visual-effects mod for Geometry Dash and Geode.
+Zaid-FX-MOD is an Android64 visual-effects mod for Geometry Dash built with Geode. It applies the **ZaidLux** final-frame post-processing pipeline without changing gameplay physics, hitboxes or level data.
 
-Version 0.2.1 fixes the preset system. Selecting a preset immediately updates every supported setting, the active render state and the values sent to the GLSL program. Manual slider changes switch the active profile to **Custom** while keeping effects enabled.
+## Included in v0.4.0
 
-## Presets
+- Bloom and emissive lighting with highlight thresholds
+- Simulated ambient occlusion and reflections
+- Fake HDR and complete color grading
+- Local contrast, specular highlights, light rays, depth separation and sharpen
+- Reactive lighting for gameplay events
+- Low, Medium, High and Ultra quality levels
+- Default, Glow, ZaidLux, ZaidLux Neon, Cinematic, Cyberpunk and ZaidLux Performance presets
+- Persistent custom settings and custom preset storage
+- Internal H.264/MP4 video recorder with save and delete choices
 
-- Default
-- Cinematic
-- Vibrant
-- Dark
-- Retro
-- RTX
+The effects use screen-space approximations and are not hardware ray tracing. The recorder currently captures video without game audio.
 
-## Effects
-
-Exposure, brightness, contrast, saturation, gamma, bloom, vignette, sharpening, chromatic aberration, tone mapping and global effect intensity update while the game is running.
-
-The official mod icon and in-game menu button use the image supplied by Zaid Navarro. A safe fallback icon is retained in case the sprite cannot be loaded.
-
-## Developer
-
-**Zaid Navarro**
-
-## Contact
-
-- Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
-- WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
-- Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
-- Source and issues: [GitHub repository](https://github.com/Fernan20881208/Zaid-FX-MOD)
+For bug reports, use the GitHub Issues link and include your device, GPU, Android, Geometry Dash and Geode versions, selected preset and quality, and relevant logs.

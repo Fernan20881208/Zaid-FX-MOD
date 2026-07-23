@@ -1,44 +1,45 @@
 # Roadmap
 
-## Milestone 0 — Foundation
+## Completed in v0.4.0
 
-- [x] Geode Android64 project
-- [x] Settings and presets
-- [x] Packaged GLSL resources
-- [x] `CCGLProgram` wrapper
-- [x] Android64 CI
+- [x] Android64 Geode project and CI build
+- [x] Final-frame hook through `CCEGLView::swapBuffers`
+- [x] Reusable framebuffer capture and OpenGL state restoration
+- [x] Two-pass ZaidLux post-processing pipeline
+- [x] Reduced-resolution lighting buffer and four quality levels
+- [x] Bloom, emissive lighting, AO, reflections and light rays
+- [x] Fake HDR, color grading, local contrast, depth separation and sharpen
+- [x] Reactive gameplay lighting
+- [x] Preset synchronization and persistent custom settings
+- [x] Internal H.264/MP4 video recorder with save/delete flow
+- [x] Current-tree privacy cleanup and documentation consolidation
+- [x] Automated Android64 artifact generation and versioned release workflow
 
-## Milestone 1 — Framebuffer proof of concept
+## Required device validation
 
-- [ ] Identify a stable final-scene render hook on Android
-- [ ] Capture one frame into an off-screen texture
-- [ ] Draw a fullscreen quad without recursion
-- [ ] Preserve and restore framebuffer, viewport and blend state
-- [ ] Handle Android OpenGL context recreation
+- [ ] Test Default, Glow, ZaidLux, ZaidLux Neon, Cinematic, Cyberpunk and ZaidLux Performance on a real Android64 device
+- [ ] Confirm the corrected shaders no longer clip saturated backgrounds into solid magenta or yellow
+- [ ] Test menus, gameplay, practice mode, editor, pause, restart and level changes
+- [ ] Test minimizing and restoring the app and changing resolution/fullscreen state when available
+- [ ] Test at least two Android GPU families when possible
+- [ ] Measure FPS and memory use for Low, Medium, High and Ultra
+- [ ] Record, stop, save, delete and play generated MP4 files
+- [ ] Verify recorder orientation, duration, frame pacing and output paths
+- [ ] Document incompatible shader, texture or capture mods
 
-Validation gate: menus, normal levels, practice mode and editor render correctly after minimizing and restoring the app.
+## Before another Geode Index submission
 
-## Milestone 2 — Single-pass filters
+- [ ] Complete the required device validation
+- [ ] Keep the pull request as draft until the generated package is tested
+- [ ] Publish a unique versioned GitHub Release without replacing an older asset
+- [ ] Confirm the release package matches the reviewed source commit
+- [ ] Contact Geode Index staff and receive permission before resubmitting
 
-- [ ] Connect settings to uniforms
-- [ ] Exposure, contrast, saturation and gamma
-- [ ] Sharpen and vignette
-- [ ] Before/after toggle
-- [ ] Per-level enable state
+## Possible future work
 
-## Milestone 3 — Bloom
-
-- [ ] Bright-pass extraction
-- [ ] Quarter-resolution render targets
-- [ ] Horizontal and vertical blur
-- [ ] Composite pass
-- [ ] Dynamic quality fallback
-
-## Milestone 4 — Presets and compatibility
-
-- [ ] OLED
-- [ ] Vibrant
-- [ ] Cinematic
-- [ ] Competitive
-- [ ] RTX Fake
-- [ ] Compatibility testing with native Geometry Dash shader triggers
+- Audio capture and A/V synchronization for the internal recorder
+- Hardware-surface encoding to avoid CPU RGBA-to-YUV conversion
+- Automatic quality selection based on measured frame time
+- Per-scene or per-level profiles
+- Improved player/object masks where stable engine hooks are available
+- Additional GPU compatibility testing and shader fallbacks
