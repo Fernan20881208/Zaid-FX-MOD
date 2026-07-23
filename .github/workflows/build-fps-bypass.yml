@@ -1,0 +1,86 @@
+name: Build Zaid FPS Bypass
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "fps-bypass/**"
+      - ".github/workflows/build-fps-bypass.yml"
+  push:
+    branches: [main]
+    paths:
+      - "fps-bypass/**"
+      - ".github/workflows/build-fps-bypass.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate FPS bypass metadata
+        shell: bash
+        run: |
+          MOD_VERSION="$(jq -r '.version' fps-bypass/mod.json)"
+          CMAKE_VERSION="v$(sed -nE 's/^project\(ZaidFPSBypass VERSION ([0-9]+\.[0-9]+\.[0-9]+)\)$/\1/p' fps-bypass/CMakeLists.txt)"
+
+          test -n "$MOD_VERSION"
+          test "$MOD_VERSION" = "$CMAKE_VERSION"
+          grep -Fq "$MOD_VERSION" fps-bypass/release-notes.md
+
+      - name: Build Android64 mod
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: given
+          cli: latest
+          target: Android64
+          build-config: Release
+          export-symbols: false
+          path: fps-bypass
+
+      - name: Prepare named package
+        id: package
+        shell: bash
+        run: |
+          VERSION="$(jq -r '.version' fps-bypass/mod.json)"
+          SOURCE="$(find '${{ steps.build.outputs.build-output }}' -maxdepth 1 -type f -name '*.geode' -print -quit)"
+          DESTINATION="release/Zaid.FPS.Bypass-${VERSION}.geode"
+
+          test -n "$SOURCE"
+          mkdir -p release
+          cp "$SOURCE" "$DESTINATION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "asset=$DESTINATION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: Zaid.FPS.Bypass-Android64
+          path: ${{ steps.package.outputs.asset }}
+          if-no-files-found: error
+
+      - name: Publish FPS bypass release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.package.outputs.version }}"
+          TAG="fps-bypass-${VERSION}"
+          ASSET="${{ steps.package.outputs.asset }}"
+
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$TAG" "$ASSET" \
+              --repo "${{ github.repository }}" \
+              --target "${{ github.sha }}" \
+              --title "Zaid FPS Bypass $VERSION" \
+              --notes-file fps-bypass/release-notes.md
+          fi
