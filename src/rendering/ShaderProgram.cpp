@@ -2,9 +2,10 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/cocos/platform/CCGL.h>
+#include <Geode/utils/file.hpp>
+#include <Geode/utils/string.hpp>
 
-#include <fstream>
-#include <sstream>
+#include <utility>
 
 using namespace geode::prelude;
 
@@ -15,15 +16,17 @@ ShaderProgram::~ShaderProgram() {
 }
 
 std::string ShaderProgram::readTextFile(std::filesystem::path const& path) {
-    std::ifstream input(path, std::ios::binary);
-    if (!input) {
-        log::error("[ZaidFX][shader] unable to open {}", path.string());
+    auto result = geode::utils::file::readString(path);
+    if (result.isErr()) {
+        log::error(
+            "[ZaidFX] unable to read shader {}: {}",
+            geode::utils::string::pathToString(path),
+            result.unwrapErr()
+        );
         return {};
     }
 
-    std::ostringstream stream;
-    stream << input.rdbuf();
-    return stream.str();
+    return std::move(result).unwrap();
 }
 
 bool ShaderProgram::loadFromFiles(
@@ -48,8 +51,8 @@ bool ShaderProgram::loadFromSource(
 
     auto* program = new cocos2d::CCGLProgram();
     if (!program->initWithVertexShaderByteArray(vertexSource.c_str(), fragmentSource.c_str())) {
-        log::error("[ZaidFX][shader] vertex compile error: {}", program->vertexShaderLog());
-        log::error("[ZaidFX][shader] fragment compile error: {}", program->fragmentShaderLog());
+        log::error("[ZaidFX] vertex shader error: {}", program->vertexShaderLog());
+        log::error("[ZaidFX] fragment shader error: {}", program->fragmentShaderLog());
         program->release();
         return false;
     }
@@ -58,7 +61,7 @@ bool ShaderProgram::loadFromSource(
     program->addAttribute(kCCAttributeNameTexCoord, cocos2d::kCCVertexAttrib_TexCoords);
 
     if (!program->link()) {
-        log::error("[ZaidFX][shader] link error: {}", program->programLog());
+        log::error("[ZaidFX] shader link error: {}", program->programLog());
         program->release();
         return false;
     }
@@ -68,15 +71,11 @@ bool ShaderProgram::loadFromSource(
     m_uniformLocations.clear();
 
     if (!isValid()) {
-        log::error("[ZaidFX][shader] linked program is not a valid GL program");
+        log::error("[ZaidFX] linked shader program is invalid");
         reset();
         return false;
     }
 
-    log::info(
-        "[ZaidFX][shader] compiled and linked successfully; program={}",
-        programID()
-    );
     return true;
 }
 
@@ -164,7 +163,7 @@ int ShaderProgram::uniformLocation(char const* uniformName) const {
     m_uniformLocations.emplace(uniformName, location);
 
     if (location < 0) {
-        log::error("[ZaidFX][shader] uniform not found: {}", uniformName);
+        log::error("[ZaidFX] shader uniform not found: {}", uniformName);
     }
 
     return location;
