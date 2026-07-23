@@ -19,6 +19,7 @@ jobs:
 
       - name: Build Geode mod
         id: build
+        continue-on-error: true
         uses: geode-sdk/build-geode-mod@main
         with:
           sdk: given
@@ -27,7 +28,31 @@ jobs:
           build-config: Release
           export-symbols: false
 
+      - name: Capture failed build diagnostics
+        if: steps.build.outcome == 'failure'
+        shell: bash
+        run: |
+          set +e
+          geode build -p android64 --config Release > build-diagnostics.log 2>&1
+          STATUS=$?
+          echo "diagnostic-build-status=$STATUS" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Upload build diagnostics
+        if: steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Zaid-FX-MOD-build-diagnostics
+          path: build-diagnostics.log
+          if-no-files-found: error
+
+      - name: Fail after diagnostics
+        if: steps.build.outcome == 'failure'
+        shell: bash
+        run: exit 1
+
       - name: Upload package
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: Zaid-FX-MOD-Android64
@@ -35,7 +60,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish versioned release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: steps.build.outcome == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
