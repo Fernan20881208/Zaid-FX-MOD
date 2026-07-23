@@ -178,19 +178,24 @@ void PostProcessRenderer::initialize() {
     ++m_settingsRevision;
 
     log::info(
-        "[ZaidFX][settings] initialized: enabled={}, red-test={}, intensity={:.2f}, "
+        "[ZaidFX][settings] initialized: enabled={}, red-test={}, preset={}, intensity={:.2f}, "
         "brightness={:.2f}, exposure={:.2f}, contrast={:.2f}, saturation={:.2f}, "
-        "gamma={:.2f}, vignette={:.2f}, sharpen={:.2f}",
+        "gamma={:.2f}, bloom={:.2f}, vignette={:.2f}, sharpen={:.2f}, "
+        "chromatic-aberration={:.2f}, tonemapping={:.2f}",
         m_settings.enabled,
         m_settings.debugRedScreen,
+        m_settings.preset,
         m_settings.intensity,
         m_settings.brightness,
         m_settings.exposure,
         m_settings.contrast,
         m_settings.saturation,
         m_settings.gamma,
+        m_settings.bloom,
         m_settings.vignette,
-        m_settings.sharpen
+        m_settings.sharpen,
+        m_settings.chromaticAberration,
+        m_settings.tonemapping
     );
 }
 
@@ -236,11 +241,20 @@ void PostProcessRenderer::setFloat(std::string_view key, float value) {
     else if (key == "gamma") {
         m_settings.gamma = value;
     }
+    else if (key == "bloom") {
+        m_settings.bloom = value;
+    }
     else if (key == "vignette") {
         m_settings.vignette = value;
     }
     else if (key == "sharpen") {
         m_settings.sharpen = value;
+    }
+    else if (key == "chromatic-aberration") {
+        m_settings.chromaticAberration = value;
+    }
+    else if (key == "tonemapping") {
+        m_settings.tonemapping = value;
     }
     else {
         log::warn("[ZaidFX][settings] unknown float setting: {}", key);
@@ -259,7 +273,8 @@ void PostProcessRenderer::setString(std::string_view key, std::string value) {
 
     m_settings.preset = std::move(value);
     ++m_settingsRevision;
-    log::info("[ZaidFX][slider->renderer] preset = {}", m_settings.preset);
+    m_uniformsDirty = true;
+    log::info("[ZaidFX][preset->renderer] active preset = {}", m_settings.preset);
 }
 
 void PostProcessRenderer::invalidatePipeline(std::string_view reason) {
@@ -505,8 +520,11 @@ bool PostProcessRenderer::applyUniforms(int width, int height) {
         { "u_contrast", "contrast", m_settings.contrast },
         { "u_saturation", "saturation", m_settings.saturation },
         { "u_gamma", "gamma", m_settings.gamma },
+        { "u_bloom", "bloom", m_settings.bloom },
         { "u_vignette", "vignette", m_settings.vignette },
         { "u_sharpen", "sharpen", m_settings.sharpen },
+        { "u_chromaticAberration", "chromatic-aberration", m_settings.chromaticAberration },
+        { "u_tonemapping", "tonemapping", m_settings.tonemapping },
     };
 
     bool success = m_shader.setInt("CC_Texture0", 0);
@@ -545,6 +563,10 @@ bool PostProcessRenderer::applyUniforms(int width, int height) {
     }
     else if (m_uniformsDirty && m_settings.debugLogging) {
         log::info("[ZaidFX][uniform] u_texelSize <- ({:.7f}, {:.7f})", texelX, texelY);
+    }
+
+    if (success && m_uniformsDirty && m_settings.debugLogging) {
+        log::info("[ZaidFX][uniform] shader update confirmed for preset {}", m_settings.preset);
     }
 
     return success;
@@ -605,14 +627,17 @@ void PostProcessRenderer::markSettingsChanged(std::string_view key, float value)
     ++m_settingsRevision;
     m_uniformsDirty = true;
 
-    float sanitized = m_settings.sharpen;
+    float sanitized = m_settings.tonemapping;
     if (key == "effect-intensity") sanitized = m_settings.intensity;
     else if (key == "brightness") sanitized = m_settings.brightness;
     else if (key == "exposure") sanitized = m_settings.exposure;
     else if (key == "contrast") sanitized = m_settings.contrast;
     else if (key == "saturation") sanitized = m_settings.saturation;
     else if (key == "gamma") sanitized = m_settings.gamma;
+    else if (key == "bloom") sanitized = m_settings.bloom;
     else if (key == "vignette") sanitized = m_settings.vignette;
+    else if (key == "sharpen") sanitized = m_settings.sharpen;
+    else if (key == "chromatic-aberration") sanitized = m_settings.chromaticAberration;
 
     log::info(
         "[ZaidFX][slider->renderer] {} requested={:.4f}, final={:.4f}",
@@ -630,14 +655,16 @@ void PostProcessRenderer::logRenderStateOnce(GLint framebuffer, int width, int h
     m_lastLoggedRenderRevision = m_settingsRevision;
     log::info(
         "[ZaidFX][render] revision={} framebuffer={} program={} texture={} size={}x{} "
-        "red-test={} intensity={:.2f}, brightness={:.2f}, exposure={:.2f}, contrast={:.2f}, "
-        "saturation={:.2f}, gamma={:.2f}, vignette={:.2f}, sharpen={:.2f}",
+        "preset={} red-test={} intensity={:.2f}, brightness={:.2f}, exposure={:.2f}, "
+        "contrast={:.2f}, saturation={:.2f}, gamma={:.2f}, bloom={:.2f}, vignette={:.2f}, "
+        "sharpen={:.2f}, chromatic-aberration={:.2f}, tonemapping={:.2f}",
         m_settingsRevision,
         framebuffer,
         m_shader.programID(),
         m_captureTexture,
         width,
         height,
+        m_settings.preset,
         m_settings.debugRedScreen,
         m_settings.intensity,
         m_settings.brightness,
@@ -645,8 +672,11 @@ void PostProcessRenderer::logRenderStateOnce(GLint framebuffer, int width, int h
         m_settings.contrast,
         m_settings.saturation,
         m_settings.gamma,
+        m_settings.bloom,
         m_settings.vignette,
-        m_settings.sharpen
+        m_settings.sharpen,
+        m_settings.chromaticAberration,
+        m_settings.tonemapping
     );
 }
 

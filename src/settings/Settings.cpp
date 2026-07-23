@@ -22,8 +22,11 @@ Settings Settings::read() {
         .contrast = static_cast<float>(mod->getSettingValue<double>("contrast")),
         .saturation = static_cast<float>(mod->getSettingValue<double>("saturation")),
         .gamma = static_cast<float>(mod->getSettingValue<double>("gamma")),
+        .bloom = static_cast<float>(mod->getSettingValue<double>("bloom")),
         .vignette = static_cast<float>(mod->getSettingValue<double>("vignette")),
-        .sharpen = static_cast<float>(mod->getSettingValue<double>("sharpen"))
+        .sharpen = static_cast<float>(mod->getSettingValue<double>("sharpen")),
+        .chromaticAberration = static_cast<float>(mod->getSettingValue<double>("chromatic-aberration")),
+        .tonemapping = static_cast<float>(mod->getSettingValue<double>("tonemapping"))
     };
 
     settings.sanitize();
@@ -37,8 +40,11 @@ void Settings::sanitize() {
     contrast = std::clamp(contrast, 0.25f, 3.0f);
     saturation = std::clamp(saturation, 0.0f, 3.0f);
     gamma = std::clamp(gamma, 0.25f, 3.0f);
+    bloom = std::clamp(bloom, 0.0f, 1.0f);
     vignette = std::clamp(vignette, 0.0f, 1.0f);
     sharpen = std::clamp(sharpen, 0.0f, 1.0f);
+    chromaticAberration = std::clamp(chromaticAberration, 0.0f, 1.0f);
+    tonemapping = std::clamp(tonemapping, 0.0f, 1.0f);
 }
 
 } // namespace zaidfx

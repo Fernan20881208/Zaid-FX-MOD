@@ -2,21 +2,22 @@
 
 Zaid-FX-MOD is an Android-focused final-frame visual-effects mod for Geometry Dash and Geode.
 
-Version 0.2.0 processes the framebuffer immediately before Android presents it. The completed menu or gameplay frame is copied into a texture, passed through the mod's GLSL program, and drawn back with a fullscreen quad before `swapBuffers`.
+Version 0.2.1 fixes the preset system. Selecting a preset immediately updates every supported setting, the active render state and the values sent to the GLSL program. Manual slider changes switch the active profile to **Custom** while keeping effects enabled.
 
-Exposure, brightness, contrast, saturation, gamma, vignette, sharpening and global effect intensity update while the game is running. Turning **Enable effects** off bypasses the post-processing pass immediately.
+## Presets
 
-## Pipeline test
+- Default
+- Cinematic
+- Vibrant
+- Dark
+- Retro
+- RTX
 
-Enable **Red framebuffer test** to force the complete final screen to solid red. This validates the render hook, capture texture, GLSL program and fullscreen draw. Disable it afterwards to use the normal effects.
+## Effects
 
-Diagnostic logging reports the render hook, framebuffer, viewport, program ID, texture ID, uniform values, shader compile/link errors and final quad draw.
+Exposure, brightness, contrast, saturation, gamma, bloom, vignette, sharpening, chromatic aberration, tone mapping and global effect intensity update while the game is running.
 
-The project does not claim to provide real RTX or ray tracing. The **RTX Fake** preset is a mobile-friendly visual style based on color grading, contrast and sharpening; bloom and other multipass effects remain planned.
-
-## Updates
-
-Automatic in-app updates will be delivered through the official Geode Index after the initial authenticated submission and approval. GitHub Releases remain the source of the versioned `.geode` packages.
+The official mod icon and in-game menu button use the image supplied by Zaid Navarro. A safe fallback icon is retained in case the sprite cannot be loaded.
 
 ## Developer
 
