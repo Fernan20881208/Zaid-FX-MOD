@@ -34,20 +34,20 @@ jobs:
         run: |
           set +e
           : > build-diagnostics.log
-          mapfile -t CACHES < <(find . -type f -name CMakeCache.txt -print)
-          printf 'Configured CMake trees:\n' >> build-diagnostics.log
-          printf '%s\n' "${CACHES[@]}" >> build-diagnostics.log
-          STATUS=1
-          for CACHE in "${CACHES[@]}"; do
-            BUILD_DIR="$(dirname "$CACHE")"
-            printf '\n===== cmake --build %s =====\n' "$BUILD_DIR" >> build-diagnostics.log
-            cmake --build "$BUILD_DIR" --config Release --parallel 2 >> build-diagnostics.log 2>&1
-            CURRENT=$?
-            if [ "$CURRENT" -eq 0 ]; then
-              STATUS=0
-            fi
-          done
-          echo "diagnostic-build-status=$STATUS" >> "$GITHUB_STEP_SUMMARY"
+          printf '===== cached Android CMake configuration =====\n' >> build-diagnostics.log
+          cmake -S . -B build >> build-diagnostics.log 2>&1
+          CONFIGURE_STATUS=$?
+          printf '\nconfigure-status=%s\n' "$CONFIGURE_STATUS" >> build-diagnostics.log
+          if [ "$CONFIGURE_STATUS" -eq 0 ]; then
+            printf '\n===== cmake --build build =====\n' >> build-diagnostics.log
+            cmake --build build --config Release --parallel 2 >> build-diagnostics.log 2>&1
+            BUILD_STATUS=$?
+          else
+            BUILD_STATUS=1
+          fi
+          printf '\nbuild-status=%s\n' "$BUILD_STATUS" >> build-diagnostics.log
+          echo "diagnostic-configure-status=$CONFIGURE_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          echo "diagnostic-build-status=$BUILD_STATUS" >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
       - name: Upload build diagnostics
