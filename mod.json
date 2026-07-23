@@ -5,9 +5,9 @@
   },
   "id": "zaid.zaid-fx-mod",
   "name": "Zaid-FX-MOD",
-  "version": "v0.2.0",
+  "version": "v0.2.1",
   "developer": "Zaid Navarro",
-  "description": "Final-frame Android post-processing and visual filters for Geometry Dash using Geode.",
+  "description": "Final-frame Android post-processing, live presets and visual filters for Geometry Dash using Geode.",
   "links": {
     "source": "https://github.com/Fernan20881208/Zaid-FX-MOD",
     "homepage": "https://www.instagram.com/Zaid.nvr/",
@@ -49,9 +49,9 @@
     "preset": {
       "type": "string",
       "name": "Preset",
-      "description": "Selecting a preset writes its values into the real sliders. Moving a slider changes this to Custom.",
-      "default": "Clean",
-      "one-of": ["Custom", "Clean", "OLED", "Vibrant", "Cinematic", "RTX Fake", "Competitive"],
+      "description": "Selecting a preset immediately updates every slider, the active renderer state and all shader uniforms. Manual slider changes switch this to Custom.",
+      "default": "Default",
+      "one-of": ["Custom", "Default", "Cinematic", "Vibrant", "Dark", "Retro", "RTX"],
       "enable-if": "enabled"
     },
     "effect-intensity": {
@@ -67,7 +67,6 @@
     "brightness": {
       "type": "float",
       "name": "Brightness",
-      "description": "Adds or removes brightness after exposure. Values are sent directly as -1.0 to 1.0.",
       "default": 0.0,
       "min": -1.0,
       "max": 1.0,
@@ -112,6 +111,16 @@
       "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
+    "bloom": {
+      "type": "float",
+      "name": "Bloom",
+      "description": "Adds a lightweight highlight glow in the final fullscreen pass.",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1.0,
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
+      "enable-if": "enabled"
+    },
     "vignette": {
       "type": "float",
       "name": "Vignette",
@@ -130,6 +139,26 @@
       "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
     },
+    "chromatic-aberration": {
+      "type": "float",
+      "name": "Chromatic aberration",
+      "description": "Separates RGB sampling slightly toward the screen edges.",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1.0,
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
+      "enable-if": "enabled"
+    },
+    "tonemapping": {
+      "type": "float",
+      "name": "Tonemapping",
+      "description": "Blends toward an ACES-style tone-mapped result.",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1.0,
+      "control": { "slider": true, "slider-step": 0.05, "input": true },
+      "enable-if": "enabled"
+    },
     "diagnostics-title": {
       "type": "title",
       "name": "Diagnostics"
@@ -137,14 +166,14 @@
     "debug-red-screen": {
       "type": "bool",
       "name": "Red framebuffer test",
-      "description": "Temporarily forces the final fullscreen quad to solid red. If this does not turn the complete menu or level red, the final-frame hook is not connected.",
+      "description": "Temporarily forces the final fullscreen quad to solid red.",
       "default": false,
       "enable-if": "enabled"
     },
     "debug-logging": {
       "type": "bool",
-      "name": "Shader debug logging",
-      "description": "Logs the render hook, GLSL program, framebuffer, capture texture, uniforms and fullscreen draw.",
+      "name": "Shader and preset debug logging",
+      "description": "Logs preset selection, internal IDs, loaded values, slider assignments, uniforms and final shader updates.",
       "default": true
     }
   }
