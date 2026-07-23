@@ -1,44 +1,26 @@
 # Roadmap
 
-## Milestone 0 — Foundation
+## Completed
 
-- [x] Geode Android64 project
-- [x] Settings and presets
-- [x] Packaged GLSL resources
-- [x] `CCGLProgram` wrapper
-- [x] Android64 CI
+- Android64 Geode project and CI build
+- Final-frame hook through `CCEGLView::swapBuffers`
+- Framebuffer capture and fullscreen shader pass
+- Live color-grading settings and presets
+- OpenGL state restoration
+- Basic context-loss recovery
 
-## Milestone 1 — Framebuffer proof of concept
+## Before another Index submission
 
-- [ ] Identify a stable final-scene render hook on Android
-- [ ] Capture one frame into an off-screen texture
-- [ ] Draw a fullscreen quad without recursion
-- [ ] Preserve and restore framebuffer, viewport and blend state
-- [ ] Handle Android OpenGL context recreation
+- [ ] Confirm the draft PR builds successfully in GitHub Actions
+- [ ] Test menus, gameplay, practice mode and the editor
+- [ ] Test minimizing and restoring the app
+- [ ] Test at least two Android GPUs when possible
+- [ ] Check compatibility with popular shader and texture mods
+- [ ] Record any known visual or performance limitations
+- [ ] Contact Index staff before resubmitting because the previous review explicitly requested no resubmission
 
-Validation gate: menus, normal levels, practice mode and editor render correctly after minimizing and restoring the app.
+## Possible future work
 
-## Milestone 2 — Single-pass filters
-
-- [ ] Connect settings to uniforms
-- [ ] Exposure, contrast, saturation and gamma
-- [ ] Sharpen and vignette
-- [ ] Before/after toggle
-- [ ] Per-level enable state
-
-## Milestone 3 — Bloom
-
-- [ ] Bright-pass extraction
-- [ ] Quarter-resolution render targets
-- [ ] Horizontal and vertical blur
-- [ ] Composite pass
-- [ ] Dynamic quality fallback
-
-## Milestone 4 — Presets and compatibility
-
-- [ ] OLED
-- [ ] Vibrant
-- [ ] Cinematic
-- [ ] Competitive
-- [ ] RTX Fake
-- [ ] Compatibility testing with native Geometry Dash shader triggers
+- Optional reduced-resolution multi-pass bloom
+- Automatic quality levels for lower-end GPUs
+- More device compatibility testing
