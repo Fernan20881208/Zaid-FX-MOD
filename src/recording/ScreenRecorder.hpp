@@ -2,6 +2,7 @@
 
 #include <Geode/cocos/platform/CCGL.h>
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <string>
