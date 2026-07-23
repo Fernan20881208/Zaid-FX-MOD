@@ -3,6 +3,8 @@
 #include <Geode/Geode.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <utility>
 
 using namespace geode::prelude;
 
@@ -26,6 +28,7 @@ struct GLState final {
     GLint activeTexture = GL_TEXTURE0;
     GLint activeTextureBinding = 0;
     GLint texture0Binding = 0;
+    GLint texture1Binding = 0;
     GLint viewport[4] = { 0, 0, 0, 0 };
     GLint scissorBox[4] = { 0, 0, 0, 0 };
     GLint blendSrcRGB = GL_ONE;
@@ -66,12 +69,8 @@ void restoreAttribute(GLuint index, AttributeState const& state) {
         state.pointer
     );
 
-    if (state.enabled == GL_TRUE) {
-        glEnableVertexAttribArray(index);
-    }
-    else {
-        glDisableVertexAttribArray(index);
-    }
+    if (state.enabled == GL_TRUE) glEnableVertexAttribArray(index);
+    else glDisableVertexAttribArray(index);
 }
 
 GLState captureState() {
@@ -99,6 +98,8 @@ GLState captureState() {
 
     glActiveTexture(GL_TEXTURE0);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &state.texture0Binding);
+    glActiveTexture(GL_TEXTURE1);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &state.texture1Binding);
     glActiveTexture(static_cast<GLenum>(state.activeTexture));
 
     state.position = captureAttribute(cocos2d::kCCVertexAttrib_Position);
@@ -107,12 +108,8 @@ GLState captureState() {
 }
 
 void setEnabled(GLenum capability, GLboolean enabled) {
-    if (enabled == GL_TRUE) {
-        glEnable(capability);
-    }
-    else {
-        glDisable(capability);
-    }
+    if (enabled == GL_TRUE) glEnable(capability);
+    else glDisable(capability);
 }
 
 void restoreState(GLState const& state) {
@@ -121,6 +118,8 @@ void restoreState(GLState const& state) {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(state.texture0Binding));
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(state.texture1Binding));
     glActiveTexture(static_cast<GLenum>(state.activeTexture));
     glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(state.activeTextureBinding));
 
@@ -143,18 +142,21 @@ void restoreState(GLState const& state) {
 
     glDepthMask(state.depthMask);
     glColorMask(
-        state.colorMask[0],
-        state.colorMask[1],
-        state.colorMask[2],
-        state.colorMask[3]
+        state.colorMask[0], state.colorMask[1],
+        state.colorMask[2], state.colorMask[3]
     );
-    glViewport(state.viewport[0], state.viewport[1], state.viewport[2], state.viewport[3]);
+    glViewport(
+        state.viewport[0], state.viewport[1],
+        state.viewport[2], state.viewport[3]
+    );
     glScissor(
-        state.scissorBox[0],
-        state.scissorBox[1],
-        state.scissorBox[2],
-        state.scissorBox[3]
+        state.scissorBox[0], state.scissorBox[1],
+        state.scissorBox[2], state.scissorBox[3]
     );
+}
+
+float normalized(zaidfx::Settings const& settings, zaidfx::FloatParam id) {
+    return settings.get(id) * 0.01f;
 }
 
 } // namespace
@@ -167,66 +169,68 @@ PostProcessRenderer& PostProcessRenderer::get() {
 }
 
 void PostProcessRenderer::initialize() {
-    if (m_initialized) {
-        return;
-    }
-
+    if (m_initialized) return;
     m_settings = Settings::read();
     m_initialized = true;
 }
 
+void PostProcessRenderer::reloadSettings() {
+    auto const previousQuality = m_settings.qualityLevel();
+    m_settings = Settings::read();
+    if (previousQuality != m_settings.qualityLevel()) invalidatePipeline();
+}
+
 void PostProcessRenderer::setBool(std::string_view key, bool value) {
-    if (key != "enabled") {
-        log::warn("[ZaidFX] unknown boolean setting: {}", key);
+    if (key == "enabled") {
+        m_settings.enabled = value;
+        if (value) invalidatePipeline();
         return;
     }
-
-    m_settings.enabled = value;
-    if (value) {
-        invalidatePipeline();
+    if (!m_settings.set(key, value)) {
+        log::warn("[ZaidFX] unknown boolean setting: {}", key);
     }
 }
 
 void PostProcessRenderer::setFloat(std::string_view key, float value) {
-    if (key == "effect-intensity") {
-        m_settings.intensity = value;
-    }
-    else if (key == "brightness") {
-        m_settings.brightness = value;
-    }
-    else if (key == "exposure") {
-        m_settings.exposure = value;
-    }
-    else if (key == "contrast") {
-        m_settings.contrast = value;
-    }
-    else if (key == "saturation") {
-        m_settings.saturation = value;
-    }
-    else if (key == "gamma") {
-        m_settings.gamma = value;
-    }
-    else if (key == "bloom") {
-        m_settings.bloom = value;
-    }
-    else if (key == "vignette") {
-        m_settings.vignette = value;
-    }
-    else if (key == "sharpen") {
-        m_settings.sharpen = value;
-    }
-    else if (key == "chromatic-aberration") {
-        m_settings.chromaticAberration = value;
-    }
-    else if (key == "tonemapping") {
-        m_settings.tonemapping = value;
-    }
-    else {
+    if (!m_settings.set(key, value)) {
         log::warn("[ZaidFX] unknown numeric setting: {}", key);
+    }
+}
+
+void PostProcessRenderer::setString(std::string_view key, std::string value) {
+    if (key != "quality") {
+        log::warn("[ZaidFX] unknown string setting: {}", key);
         return;
     }
 
-    m_settings.sanitize();
+    auto const previousQuality = m_settings.qualityLevel();
+    if (!m_settings.setQuality(std::move(value))) {
+        log::warn("[ZaidFX] invalid quality value");
+        return;
+    }
+    if (previousQuality != m_settings.qualityLevel()) invalidatePipeline();
+}
+
+void PostProcessRenderer::trigger(ReactiveEvent event) {
+    if (!m_settings.get(BoolParam::ReactiveEnabled) || !eventEnabled(event)) return;
+
+    auto const pulse = normalized(m_settings, FloatParam::PulseStrength);
+    auto const flash = normalized(m_settings, FloatParam::FlashStrength);
+    m_reactivePulse = std::max(m_reactivePulse, pulse);
+
+    if (event == ReactiveEvent::Death) {
+        m_reactiveFlash = std::max(m_reactiveFlash, flash);
+    }
+    else if (event == ReactiveEvent::Portal || event == ReactiveEvent::Coin) {
+        m_reactiveFlash = std::max(m_reactiveFlash, flash * 0.55f);
+    }
+    else {
+        m_reactiveFlash = std::max(m_reactiveFlash, flash * 0.25f);
+    }
+}
+
+void PostProcessRenderer::setGameplaySpeed(float speed) {
+    m_gameplaySpeed = std::clamp(speed, 0.0f, 1.0f);
 }
 
 void PostProcessRenderer::invalidatePipeline() {
@@ -235,20 +239,18 @@ void PostProcessRenderer::invalidatePipeline() {
 }
 
 bool PostProcessRenderer::shouldRender() const {
-    return m_initialized && m_settings.enabled;
+    return m_initialized && m_settings.enabled && m_settings.hasVisibleEffects();
 }
 
 bool PostProcessRenderer::isPipelineReady() const {
-    return m_captureTexture != 0 &&
-        glIsTexture(m_captureTexture) == GL_TRUE &&
-        m_shader.isValid() &&
-        !m_pipelineDirty;
+    return m_captureTexture != 0 && glIsTexture(m_captureTexture) == GL_TRUE &&
+        m_lightingTexture != 0 && glIsTexture(m_lightingTexture) == GL_TRUE &&
+        m_lightingFramebuffer != 0 && glIsFramebuffer(m_lightingFramebuffer) == GL_TRUE &&
+        m_lightingShader.isValid() && m_finalShader.isValid() && !m_pipelineDirty;
 }
 
 void PostProcessRenderer::processPresentedFrame() {
-    if (!shouldRender()) {
-        return;
-    }
+    if (!shouldRender()) return;
 
     auto const state = captureState();
     auto const x = state.viewport[0];
@@ -260,7 +262,6 @@ void PostProcessRenderer::processPresentedFrame() {
         restoreState(state);
         return;
     }
-
     if (!ensurePipeline(width, height)) {
         restoreState(state);
         return;
@@ -268,26 +269,19 @@ void PostProcessRenderer::processPresentedFrame() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
     glActiveTexture(GL_TEXTURE0);
-
     if (!captureCurrentFramebuffer(x, y, width, height)) {
         restoreState(state);
         invalidatePipeline();
         return;
     }
 
-    glViewport(x, y, width, height);
-    glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_CULL_FACE);
-    glDepthMask(GL_FALSE);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    auto* director = cocos2d::CCDirector::sharedDirector();
+    updateReactiveState(director ? director->getDeltaTime() : (1.0f / 60.0f));
 
-    m_shader.use();
-    if (applyUniforms(width, height)) {
-        drawFullscreenQuad();
-    }
+    bool success = true;
+    if (m_settings.hasLightingEffects()) success = renderLightingPass();
+    if (success) success = renderFinalPass(state.framebuffer, x, y, width, height);
+    if (!success) invalidatePipeline();
 
     restoreState(state);
 }
@@ -298,194 +292,22 @@ bool PostProcessRenderer::ensurePipeline(int width, int height) {
         return false;
     }
 
+    auto const qualityChanged = m_pipelineQuality != m_settings.qualityLevel();
     auto const sizeChanged = width != m_textureWidth || height != m_textureHeight;
     auto const contextLost =
         (m_captureTexture != 0 && glIsTexture(m_captureTexture) != GL_TRUE) ||
-        (m_shader.isLoaded() && !m_shader.isValid());
+        (m_lightingTexture != 0 && glIsTexture(m_lightingTexture) != GL_TRUE) ||
+        (m_lightingFramebuffer != 0 && glIsFramebuffer(m_lightingFramebuffer) != GL_TRUE) ||
+        (m_lightingShader.isLoaded() && !m_lightingShader.isValid()) ||
+        (m_finalShader.isLoaded() && !m_finalShader.isValid());
 
-    if (contextLost) {
-        invalidatePipeline();
-    }
-
-    if (!m_pipelineDirty && !sizeChanged && isPipelineReady()) {
-        return true;
-    }
+    if (contextLost || qualityChanged) invalidatePipeline();
+    if (!m_pipelineDirty && !sizeChanged && isPipelineReady()) return true;
 
     if (!rebuildPipeline(width, height)) {
         m_retryFrames = 120;
         return false;
     }
-
-    return true;
-}
-
-bool PostProcessRenderer::rebuildPipeline(int width, int height) {
-    destroyPipeline();
-
-    auto const resources = Mod::get()->getResourcesDir();
-    auto const vertexPath = resources / "fullscreen.vert";
-    auto const fragmentPath = resources / "color-grade.frag";
-
-    if (!m_shader.loadFromFiles(vertexPath, fragmentPath)) {
-        log::error("[ZaidFX] unable to load the packaged shaders");
-        return false;
-    }
-
-    GLint previousActiveTexture = GL_TEXTURE0;
-    GLint previousBinding = 0;
-    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousActiveTexture);
-    glActiveTexture(GL_TEXTURE0);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousBinding);
-
-    while (glGetError() != GL_NO_ERROR) {}
-
-    glGenTextures(1, &m_captureTexture);
-    glBindTexture(GL_TEXTURE_2D, m_captureTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA,
-        width,
-        height,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        nullptr
-    );
-
-    auto const error = glGetError();
-    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
-    glActiveTexture(static_cast<GLenum>(previousActiveTexture));
-
-    if (m_captureTexture == 0 || error != GL_NO_ERROR) {
-        log::error(
-            "[ZaidFX] texture allocation failed for {}x{} (OpenGL error 0x{:X})",
-            width,
-            height,
-            error
-        );
-        destroyPipeline();
-        return false;
-    }
-
-    m_textureWidth = width;
-    m_textureHeight = height;
-    m_pipelineDirty = false;
-    return true;
-}
-
-void PostProcessRenderer::destroyPipeline() {
-    if (m_captureTexture != 0) {
-        glDeleteTextures(1, &m_captureTexture);
-        m_captureTexture = 0;
-    }
-
-    m_shader.reset();
-    m_textureWidth = 0;
-    m_textureHeight = 0;
-}
-
-bool PostProcessRenderer::captureCurrentFramebuffer(int x, int y, int width, int height) {
-    while (glGetError() != GL_NO_ERROR) {}
-
-    glBindTexture(GL_TEXTURE_2D, m_captureTexture);
-    glCopyTexSubImage2D(
-        GL_TEXTURE_2D,
-        0,
-        0,
-        0,
-        x,
-        y,
-        width,
-        height
-    );
-
-    auto const error = glGetError();
-    if (error != GL_NO_ERROR) {
-        log::error("[ZaidFX] framebuffer copy failed (OpenGL error 0x{:X})", error);
-        return false;
-    }
-
-    return true;
-}
-
-bool PostProcessRenderer::applyUniforms(int width, int height) {
-    struct UniformValue final {
-        char const* name;
-        float value;
-    };
-
-    UniformValue const values[] = {
-        { "u_intensity", m_settings.intensity },
-        { "u_brightness", m_settings.brightness },
-        { "u_exposure", m_settings.exposure },
-        { "u_contrast", m_settings.contrast },
-        { "u_saturation", m_settings.saturation },
-        { "u_gamma", m_settings.gamma },
-        { "u_bloom", m_settings.bloom },
-        { "u_vignette", m_settings.vignette },
-        { "u_sharpen", m_settings.sharpen },
-        { "u_chromaticAberration", m_settings.chromaticAberration },
-        { "u_tonemapping", m_settings.tonemapping },
-    };
-
-    bool success = m_shader.setInt("CC_Texture0", 0);
-    for (auto const& entry : values) {
-        auto const updated = m_shader.setFloat(entry.name, entry.value);
-        success = updated && success;
-    }
-
-    auto const texelX = 1.0f / static_cast<float>(std::max(width, 1));
-    auto const texelY = 1.0f / static_cast<float>(std::max(height, 1));
-    auto const texelUpdated = m_shader.setVec2("u_texelSize", texelX, texelY);
-    return texelUpdated && success;
-}
-
-bool PostProcessRenderer::drawFullscreenQuad() {
-    static GLfloat const vertices[] = {
-        -1.0f, -1.0f, 0.0f, 0.0f,
-         1.0f, -1.0f, 1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f, 1.0f,
-         1.0f,  1.0f, 1.0f, 1.0f,
-    };
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_captureTexture);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    glEnableVertexAttribArray(cocos2d::kCCVertexAttrib_Position);
-    glEnableVertexAttribArray(cocos2d::kCCVertexAttrib_TexCoords);
-    glVertexAttribPointer(
-        cocos2d::kCCVertexAttrib_Position,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        sizeof(GLfloat) * 4,
-        vertices
-    );
-    glVertexAttribPointer(
-        cocos2d::kCCVertexAttrib_TexCoords,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        sizeof(GLfloat) * 4,
-        vertices + 2
-    );
-
-    while (glGetError() != GL_NO_ERROR) {}
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    auto const error = glGetError();
-    if (error != GL_NO_ERROR) {
-        log::error("[ZaidFX] fullscreen draw failed (OpenGL error 0x{:X})", error);
-        return false;
-    }
-
     return true;
 }
 
