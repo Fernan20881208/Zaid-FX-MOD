@@ -1,0 +1,49 @@
+{
+  "geode": "5.7.1",
+  "gd": {
+    "android": "2.2081"
+  },
+  "id": "zaid.fps-bypass",
+  "name": "Zaid FPS Bypass",
+  "version": "v1.0.0",
+  "developer": "Zaid",
+  "description": "Simple configurable FPS bypass for Geometry Dash on Android64.",
+  "links": {
+    "source": "https://github.com/Fernan20881208/Zaid-FX-MOD"
+  },
+  "issues": {
+    "info": "Include your device, screen refresh rate, Android, Geometry Dash and Geode versions, selected FPS and latest Geode log.",
+    "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
+  },
+  "tags": [
+    "enhancement",
+    "utility",
+    "offline"
+  ],
+  "settings": {
+    "enabled": {
+      "type": "bool",
+      "name": "Enable FPS bypass",
+      "description": "Overrides the animation interval used by Geometry Dash. Disable this to restore the interval requested by the game.",
+      "default": true
+    },
+    "target-fps": {
+      "type": "int",
+      "name": "Target FPS",
+      "description": "Requested frame rate. The visible result is still limited by the phone display, Android and device performance.",
+      "default": 120,
+      "min": 30,
+      "max": 360,
+      "control": {
+        "arrows": true,
+        "arrow-step": 1,
+        "big-arrows": true,
+        "big-arrow-step": 30,
+        "slider": true,
+        "slider-step": 1,
+        "input": true
+      },
+      "enable-if": "enabled"
+    }
+  }
+}
