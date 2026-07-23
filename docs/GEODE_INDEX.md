@@ -1,40 +1,30 @@
 # Geode Index publication
 
-Automatic updates inside Geode are provided by the official Geode Index. The index does not discover GitHub releases automatically; the developer must authenticate once and submit the first release.
+The previous Index review explicitly requested that this mod not be resubmitted. Do not submit another package without first contacting the Index staff and confirming that a new review is appropriate.
 
-## Initial submission
+## Preparation checklist
 
-After `v0.2.0` is published and its `.geode` file is attached to GitHub Releases:
+1. Build the exact commit that will be submitted through GitHub Actions.
+2. Test the generated `.geode` package on supported Android devices.
+3. Confirm that the package version matches `mod.json`.
+4. Publish a new GitHub Release; never replace an asset for an existing version.
+5. Keep the source repository public and make sure the release package corresponds to the reviewed source.
+6. Remove private contact details, credentials, tokens and local paths from the current tree.
+7. Document known compatibility and performance limitations.
+
+## Submission commands
+
+After Index staff confirms that resubmission is allowed:
 
 ```bash
 geode index login
 geode index mods create
 ```
 
-Use the direct release asset URL for `zaid.zaid-fx-mod.geode` when prompted.
-
-An index administrator must approve the initial submission. Once approved, Zaid-FX-MOD appears in Geode's Download section and installed users receive update notifications directly in Geode.
-
-## Future versions
-
-For each update:
-
-1. Increase `version` in `mod.json`.
-2. Create a new GitHub Release without replacing an older package.
-3. Run:
+For later approved versions:
 
 ```bash
 geode index mods update
 ```
 
-The `.geode` file for an existing version must never be replaced because the index stores its checksum.
-
-## Current repository preparation
-
-- Public source repository.
-- MIT license.
-- Root `logo.png`.
-- `about.md`, `support.md` and `changelog.md`.
-- Versioned GitHub Releases with a direct `.geode` asset.
-- Geometry Dash and Geode version metadata.
-- Android64 build validation.
+Use the direct URL of the versioned `.geode` release asset when prompted.
