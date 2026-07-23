@@ -1,5 +1,7 @@
 #include "PostProcessRenderer.hpp"
 
+#include "../recording/ScreenRecorder.hpp"
+
 #include <Geode/Geode.hpp>
 
 #include <algorithm>
@@ -250,7 +252,10 @@ bool PostProcessRenderer::isPipelineReady() const {
 }
 
 void PostProcessRenderer::processPresentedFrame() {
-    if (!shouldRender()) return;
+    auto& recorder = ScreenRecorder::get();
+    auto const renderEffects = shouldRender();
+    auto const recordFrame = recorder.wantsFrames();
+    if (!renderEffects && !recordFrame) return;
 
     auto const state = captureState();
     auto const x = state.viewport[0];
@@ -262,26 +267,56 @@ void PostProcessRenderer::processPresentedFrame() {
         restoreState(state);
         return;
     }
-    if (!ensurePipeline(width, height)) {
-        restoreState(state);
-        return;
+
+    bool renderedSuccessfully = true;
+    if (renderEffects) {
+        if (!ensurePipeline(width, height)) {
+            renderedSuccessfully = false;
+        }
+        else {
+            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
+            glActiveTexture(GL_TEXTURE0);
+            if (!captureCurrentFramebuffer(x, y, width, height)) {
+                renderedSuccessfully = false;
+            }
+            else {
+                auto* director = cocos2d::CCDirector::sharedDirector();
+                updateReactiveState(
+                    director ? director->getDeltaTime() : (1.0f / 60.0f)
+                );
+
+                if (m_settings.hasLightingEffects()) {
+                    renderedSuccessfully = renderLightingPass();
+                }
+                if (renderedSuccessfully) {
+                    renderedSuccessfully = renderFinalPass(
+                        state.framebuffer,
+                        x,
+                        y,
+                        width,
+                        height
+                    );
+                }
+            }
+        }
+
+        if (!renderedSuccessfully) {
+            invalidatePipeline();
+            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
+            glViewport(x, y, width, height);
+        }
+    }
+    else {
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
+        glViewport(x, y, width, height);
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
-    glActiveTexture(GL_TEXTURE0);
-    if (!captureCurrentFramebuffer(x, y, width, height)) {
-        restoreState(state);
-        invalidatePipeline();
-        return;
+    // Capture after the optional final pass so the MP4 contains exactly the
+    // image presented by ZaidFX. The recorder remains completely idle when it
+    // has not been started.
+    if (recorder.wantsFrames()) {
+        recorder.captureFrame(x, y, width, height);
     }
-
-    auto* director = cocos2d::CCDirector::sharedDirector();
-    updateReactiveState(director ? director->getDeltaTime() : (1.0f / 60.0f));
-
-    bool success = true;
-    if (m_settings.hasLightingEffects()) success = renderLightingPass();
-    if (success) success = renderFinalPass(state.framebuffer, x, y, width, height);
-    if (!success) invalidatePipeline();
 
     restoreState(state);
 }
