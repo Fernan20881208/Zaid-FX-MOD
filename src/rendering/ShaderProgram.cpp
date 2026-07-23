@@ -136,20 +136,16 @@ void ShaderProgram::reset() {
     }
 }
 
-cocos2d::CCGLProgram* ShaderProgram::get() const {
-    return m_program;
-}
-
-unsigned int ShaderProgram::programID() const {
-    return m_program ? m_program->getProgram() : 0u;
-}
-
 bool ShaderProgram::isLoaded() const {
     return m_program != nullptr;
 }
 
 bool ShaderProgram::isValid() const {
-    auto const id = programID();
+    if (!m_program) {
+        return false;
+    }
+
+    auto const id = m_program->getProgram();
     return id != 0u && glIsProgram(id) == GL_TRUE;
 }
 
