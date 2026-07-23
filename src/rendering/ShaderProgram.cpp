@@ -50,15 +50,24 @@ bool ShaderProgram::loadFromSource(
     reset();
 
     auto* program = new cocos2d::CCGLProgram();
-    if (!program->initWithVertexShaderByteArray(vertexSource.c_str(), fragmentSource.c_str())) {
+    if (!program->initWithVertexShaderByteArray(
+        vertexSource.c_str(),
+        fragmentSource.c_str()
+    )) {
         log::error("[ZaidFX] vertex shader error: {}", program->vertexShaderLog());
         log::error("[ZaidFX] fragment shader error: {}", program->fragmentShaderLog());
         program->release();
         return false;
     }
 
-    program->addAttribute(kCCAttributeNamePosition, cocos2d::kCCVertexAttrib_Position);
-    program->addAttribute(kCCAttributeNameTexCoord, cocos2d::kCCVertexAttrib_TexCoords);
+    program->addAttribute(
+        kCCAttributeNamePosition,
+        cocos2d::kCCVertexAttrib_Position
+    );
+    program->addAttribute(
+        kCCAttributeNameTexCoord,
+        cocos2d::kCCVertexAttrib_TexCoords
+    );
 
     if (!program->link()) {
         log::error("[ZaidFX] shader link error: {}", program->programLog());
@@ -113,7 +122,11 @@ bool ShaderProgram::setFloat(char const* uniformName, float value) const {
     return true;
 }
 
-bool ShaderProgram::setVec2(char const* uniformName, float x, float y) const {
+bool ShaderProgram::setVec2(
+    char const* uniformName,
+    float x,
+    float y
+) const {
     if (!m_program || !uniformName) {
         return false;
     }
@@ -124,6 +137,26 @@ bool ShaderProgram::setVec2(char const* uniformName, float x, float y) const {
     }
 
     m_program->setUniformLocationWith2f(location, x, y);
+    return true;
+}
+
+bool ShaderProgram::setVec4(
+    char const* uniformName,
+    float x,
+    float y,
+    float z,
+    float w
+) const {
+    if (!m_program || !uniformName) {
+        return false;
+    }
+
+    auto const location = uniformLocation(uniformName);
+    if (location < 0) {
+        return false;
+    }
+
+    m_program->setUniformLocationWith4f(location, x, y, z, w);
     return true;
 }
 
