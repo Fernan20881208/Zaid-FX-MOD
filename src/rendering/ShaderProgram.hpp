@@ -22,7 +22,6 @@ public:
         std::filesystem::path const& vertexPath,
         std::filesystem::path const& fragmentPath
     );
-    bool loadFromSource(std::string const& vertexSource, std::string const& fragmentSource);
 
     void use() const;
     bool setInt(char const* uniformName, int value) const;
@@ -30,12 +29,11 @@ public:
     bool setVec2(char const* uniformName, float x, float y) const;
     void reset();
 
-    [[nodiscard]] cocos2d::CCGLProgram* get() const;
-    [[nodiscard]] unsigned int programID() const;
     [[nodiscard]] bool isLoaded() const;
     [[nodiscard]] bool isValid() const;
 
 private:
+    bool loadFromSource(std::string const& vertexSource, std::string const& fragmentSource);
     static std::string readTextFile(std::filesystem::path const& path);
     int uniformLocation(char const* uniformName) const;
 
