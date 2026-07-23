@@ -79,8 +79,14 @@ public:
         if (!visual) return false;
 
         visual->setScale(0.44f);
-        visual->setCascadeColorEnabled(true);
-        visual->setColor(buttonColor(zaidfx::ScreenRecorder::get().state()));
+        auto const initialColor = buttonColor(zaidfx::ScreenRecorder::get().state());
+        if (m_buttonSprite) {
+            m_buttonSprite->setCascadeColorEnabled(true);
+            m_buttonSprite->setColor(initialColor);
+        }
+        if (m_fallbackLabel) {
+            m_fallbackLabel->setColor(initialColor);
+        }
 
         m_button = CCMenuItemSpriteExtra::create(
             visual,
