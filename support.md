@@ -1,12 +1,14 @@
-# Support and contact
+# Support
 
-Zaid-FX-MOD is developed by **Zaid Navarro**.
+Report bugs and compatibility problems through the repository's GitHub Issues page.
 
-For questions, compatibility reports or development contact, use any of these options:
+Please include:
 
-- Instagram: [@Zaid.nvr](https://www.instagram.com/Zaid.nvr/)
-- WhatsApp: [+52 33 4515 8805](https://wa.me/523345158805)
-- Email: [zaidnavarrosaucedo@gmail.com](mailto:zaidnavarrosaucedo@gmail.com)
-- GitHub issues: [Report a problem](https://github.com/Fernan20881208/Zaid-FX-MOD/issues)
+- Device model and GPU
+- Android version
+- Geometry Dash version
+- Geode version
+- Steps to reproduce the problem
+- Latest crash log or Geode log when relevant
 
-When reporting a rendering problem, include your device model, GPU, Android version, Geometry Dash version, Geode version and the latest log.
+Do not post passwords, access tokens, phone numbers, private account information or other sensitive data in an issue.
