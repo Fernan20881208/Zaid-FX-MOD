@@ -162,8 +162,8 @@ void restoreState(GLState const& state) {
 namespace zaidfx {
 
 PostProcessRenderer& PostProcessRenderer::get() {
-    static auto* instance = new PostProcessRenderer();
-    return *instance;
+    static PostProcessRenderer instance;
+    return instance;
 }
 
 void PostProcessRenderer::initialize() {
@@ -172,54 +172,19 @@ void PostProcessRenderer::initialize() {
     }
 
     m_settings = Settings::read();
-    m_settings.sanitize();
     m_initialized = true;
-    m_uniformsDirty = true;
-    ++m_settingsRevision;
-
-    log::info(
-        "[ZaidFX][settings] initialized: enabled={}, red-test={}, preset={}, intensity={:.2f}, "
-        "brightness={:.2f}, exposure={:.2f}, contrast={:.2f}, saturation={:.2f}, "
-        "gamma={:.2f}, bloom={:.2f}, vignette={:.2f}, sharpen={:.2f}, "
-        "chromatic-aberration={:.2f}, tonemapping={:.2f}",
-        m_settings.enabled,
-        m_settings.debugRedScreen,
-        m_settings.preset,
-        m_settings.intensity,
-        m_settings.brightness,
-        m_settings.exposure,
-        m_settings.contrast,
-        m_settings.saturation,
-        m_settings.gamma,
-        m_settings.bloom,
-        m_settings.vignette,
-        m_settings.sharpen,
-        m_settings.chromaticAberration,
-        m_settings.tonemapping
-    );
 }
 
 void PostProcessRenderer::setBool(std::string_view key, bool value) {
-    if (key == "enabled") {
-        m_settings.enabled = value;
-        if (value) {
-            invalidatePipeline("effects enabled");
-        }
-    }
-    else if (key == "debug-logging") {
-        m_settings.debugLogging = value;
-    }
-    else if (key == "debug-red-screen") {
-        m_settings.debugRedScreen = value;
-    }
-    else {
-        log::warn("[ZaidFX][settings] unknown bool setting: {}", key);
+    if (key != "enabled") {
+        log::warn("[ZaidFX] unknown boolean setting: {}", key);
         return;
     }
 
-    ++m_settingsRevision;
-    m_uniformsDirty = true;
-    log::info("[ZaidFX][slider->renderer] {} = {}", key, value);
+    m_settings.enabled = value;
+    if (value) {
+        invalidatePipeline();
+    }
 }
 
 void PostProcessRenderer::setFloat(std::string_view key, float value) {
@@ -257,30 +222,16 @@ void PostProcessRenderer::setFloat(std::string_view key, float value) {
         m_settings.tonemapping = value;
     }
     else {
-        log::warn("[ZaidFX][settings] unknown float setting: {}", key);
+        log::warn("[ZaidFX] unknown numeric setting: {}", key);
         return;
     }
 
     m_settings.sanitize();
-    markSettingsChanged(key, value);
 }
 
-void PostProcessRenderer::setString(std::string_view key, std::string value) {
-    if (key != "preset") {
-        log::warn("[ZaidFX][settings] unknown string setting: {}", key);
-        return;
-    }
-
-    m_settings.preset = std::move(value);
-    ++m_settingsRevision;
-    m_uniformsDirty = true;
-    log::info("[ZaidFX][preset->renderer] active preset = {}", m_settings.preset);
-}
-
-void PostProcessRenderer::invalidatePipeline(std::string_view reason) {
+void PostProcessRenderer::invalidatePipeline() {
     m_pipelineDirty = true;
     m_retryFrames = 0;
-    log::info("[ZaidFX][pipeline] invalidated: {}", reason);
 }
 
 bool PostProcessRenderer::shouldRender() const {
@@ -294,13 +245,7 @@ bool PostProcessRenderer::isPipelineReady() const {
         !m_pipelineDirty;
 }
 
-Settings const& PostProcessRenderer::settings() const {
-    return m_settings;
-}
-
 void PostProcessRenderer::processPresentedFrame() {
-    ++m_frameCounter;
-
     if (!shouldRender()) {
         return;
     }
@@ -312,22 +257,8 @@ void PostProcessRenderer::processPresentedFrame() {
     auto const height = state.viewport[3];
 
     if (width <= 0 || height <= 0) {
-        if (m_settings.debugLogging) {
-            log::warn("[ZaidFX][render-hook] invalid viewport {}x{}", width, height);
-        }
+        restoreState(state);
         return;
-    }
-
-    if (m_settings.debugLogging && (m_frameCounter == 1 || m_frameCounter % 300 == 0)) {
-        log::info(
-            "[ZaidFX][render-hook] swapBuffers frame={} framebuffer={} viewport=({}, {}, {}x{})",
-            m_frameCounter,
-            state.framebuffer,
-            x,
-            y,
-            width,
-            height
-        );
     }
 
     if (!ensurePipeline(width, height)) {
@@ -340,7 +271,7 @@ void PostProcessRenderer::processPresentedFrame() {
 
     if (!captureCurrentFramebuffer(x, y, width, height)) {
         restoreState(state);
-        invalidatePipeline("framebuffer capture failed");
+        invalidatePipeline();
         return;
     }
 
@@ -354,13 +285,8 @@ void PostProcessRenderer::processPresentedFrame() {
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     m_shader.use();
-
-    auto const uniformsReady = applyUniforms(width, height);
-    auto const quadDrawn = uniformsReady && drawFullscreenQuad();
-
-    if (quadDrawn) {
-        logRenderStateOnce(state.framebuffer, width, height);
-        m_uniformsDirty = false;
+    if (applyUniforms(width, height)) {
+        drawFullscreenQuad();
     }
 
     restoreState(state);
@@ -378,7 +304,7 @@ bool PostProcessRenderer::ensurePipeline(int width, int height) {
         (m_shader.isLoaded() && !m_shader.isValid());
 
     if (contextLost) {
-        invalidatePipeline("OpenGL context resources were lost");
+        invalidatePipeline();
     }
 
     if (!m_pipelineDirty && !sizeChanged && isPipelineReady()) {
@@ -401,11 +327,7 @@ bool PostProcessRenderer::rebuildPipeline(int width, int height) {
     auto const fragmentPath = resources / "color-grade.frag";
 
     if (!m_shader.loadFromFiles(vertexPath, fragmentPath)) {
-        log::error(
-            "[ZaidFX][pipeline] unable to load shaders from {} and {}",
-            vertexPath.string(),
-            fragmentPath.string()
-        );
+        log::error("[ZaidFX] unable to load the packaged shaders");
         return false;
     }
 
@@ -414,6 +336,8 @@ bool PostProcessRenderer::rebuildPipeline(int width, int height) {
     glGetIntegerv(GL_ACTIVE_TEXTURE, &previousActiveTexture);
     glActiveTexture(GL_TEXTURE0);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousBinding);
+
+    while (glGetError() != GL_NO_ERROR) {}
 
     glGenTextures(1, &m_captureTexture);
     glBindTexture(GL_TEXTURE_2D, m_captureTexture);
@@ -439,8 +363,7 @@ bool PostProcessRenderer::rebuildPipeline(int width, int height) {
 
     if (m_captureTexture == 0 || error != GL_NO_ERROR) {
         log::error(
-            "[ZaidFX][pipeline] texture allocation failed: texture={}, size={}x{}, glError=0x{:X}",
-            m_captureTexture,
+            "[ZaidFX] texture allocation failed for {}x{} (OpenGL error 0x{:X})",
             width,
             height,
             error
@@ -452,15 +375,6 @@ bool PostProcessRenderer::rebuildPipeline(int width, int height) {
     m_textureWidth = width;
     m_textureHeight = height;
     m_pipelineDirty = false;
-    m_uniformsDirty = true;
-
-    log::info(
-        "[ZaidFX][pipeline] ready: program={}, captureTexture={}, size={}x{}",
-        m_shader.programID(),
-        m_captureTexture,
-        width,
-        height
-    );
     return true;
 }
 
@@ -492,13 +406,7 @@ bool PostProcessRenderer::captureCurrentFramebuffer(int x, int y, int width, int
 
     auto const error = glGetError();
     if (error != GL_NO_ERROR) {
-        log::error(
-            "[ZaidFX][capture] glCopyTexSubImage2D failed: framebuffer viewport={}x{}, texture={}, glError=0x{:X}",
-            width,
-            height,
-            m_captureTexture,
-            error
-        );
+        log::error("[ZaidFX] framebuffer copy failed (OpenGL error 0x{:X})", error);
         return false;
     }
 
@@ -507,69 +415,34 @@ bool PostProcessRenderer::captureCurrentFramebuffer(int x, int y, int width, int
 
 bool PostProcessRenderer::applyUniforms(int width, int height) {
     struct UniformValue final {
-        char const* uniform;
-        char const* setting;
+        char const* name;
         float value;
     };
 
     UniformValue const values[] = {
-        { "u_debugRed", "debug-red-screen", m_settings.debugRedScreen ? 1.0f : 0.0f },
-        { "u_intensity", "effect-intensity", m_settings.intensity },
-        { "u_brightness", "brightness", m_settings.brightness },
-        { "u_exposure", "exposure", m_settings.exposure },
-        { "u_contrast", "contrast", m_settings.contrast },
-        { "u_saturation", "saturation", m_settings.saturation },
-        { "u_gamma", "gamma", m_settings.gamma },
-        { "u_bloom", "bloom", m_settings.bloom },
-        { "u_vignette", "vignette", m_settings.vignette },
-        { "u_sharpen", "sharpen", m_settings.sharpen },
-        { "u_chromaticAberration", "chromatic-aberration", m_settings.chromaticAberration },
-        { "u_tonemapping", "tonemapping", m_settings.tonemapping },
+        { "u_intensity", m_settings.intensity },
+        { "u_brightness", m_settings.brightness },
+        { "u_exposure", m_settings.exposure },
+        { "u_contrast", m_settings.contrast },
+        { "u_saturation", m_settings.saturation },
+        { "u_gamma", m_settings.gamma },
+        { "u_bloom", m_settings.bloom },
+        { "u_vignette", m_settings.vignette },
+        { "u_sharpen", m_settings.sharpen },
+        { "u_chromaticAberration", m_settings.chromaticAberration },
+        { "u_tonemapping", m_settings.tonemapping },
     };
 
     bool success = m_shader.setInt("CC_Texture0", 0);
-    if (!success) {
-        log::error("[ZaidFX][uniform] invalid CC_Texture0 location");
-    }
-
     for (auto const& entry : values) {
-        auto const updated = m_shader.setFloat(entry.uniform, entry.value);
-        success = success && updated;
-
-        if (!updated) {
-            log::error(
-                "[ZaidFX][uniform] invalid location: {} for {}",
-                entry.uniform,
-                entry.setting
-            );
-        }
-        else if (m_uniformsDirty && m_settings.debugLogging) {
-            log::info(
-                "[ZaidFX][uniform] {} <- {:.4f} ({})",
-                entry.uniform,
-                entry.value,
-                entry.setting
-            );
-        }
+        auto const updated = m_shader.setFloat(entry.name, entry.value);
+        success = updated && success;
     }
 
     auto const texelX = 1.0f / static_cast<float>(std::max(width, 1));
     auto const texelY = 1.0f / static_cast<float>(std::max(height, 1));
     auto const texelUpdated = m_shader.setVec2("u_texelSize", texelX, texelY);
-    success = success && texelUpdated;
-
-    if (!texelUpdated) {
-        log::error("[ZaidFX][uniform] invalid u_texelSize location");
-    }
-    else if (m_uniformsDirty && m_settings.debugLogging) {
-        log::info("[ZaidFX][uniform] u_texelSize <- ({:.7f}, {:.7f})", texelX, texelY);
-    }
-
-    if (success && m_uniformsDirty && m_settings.debugLogging) {
-        log::info("[ZaidFX][uniform] shader update confirmed for preset {}", m_settings.preset);
-    }
-
-    return success;
+    return texelUpdated && success;
 }
 
 bool PostProcessRenderer::drawFullscreenQuad() {
@@ -606,78 +479,14 @@ bool PostProcessRenderer::drawFullscreenQuad() {
 
     while (glGetError() != GL_NO_ERROR) {}
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    auto const error = glGetError();
 
+    auto const error = glGetError();
     if (error != GL_NO_ERROR) {
-        log::error("[ZaidFX][quad] draw failed: glError=0x{:X}", error);
+        log::error("[ZaidFX] fullscreen draw failed (OpenGL error 0x{:X})", error);
         return false;
     }
 
-    if (m_uniformsDirty && m_settings.debugLogging) {
-        log::info(
-            "[ZaidFX][quad] final fullscreen quad drawn with program={} texture={}",
-            m_shader.programID(),
-            m_captureTexture
-        );
-    }
     return true;
-}
-
-void PostProcessRenderer::markSettingsChanged(std::string_view key, float value) {
-    ++m_settingsRevision;
-    m_uniformsDirty = true;
-
-    float sanitized = m_settings.tonemapping;
-    if (key == "effect-intensity") sanitized = m_settings.intensity;
-    else if (key == "brightness") sanitized = m_settings.brightness;
-    else if (key == "exposure") sanitized = m_settings.exposure;
-    else if (key == "contrast") sanitized = m_settings.contrast;
-    else if (key == "saturation") sanitized = m_settings.saturation;
-    else if (key == "gamma") sanitized = m_settings.gamma;
-    else if (key == "bloom") sanitized = m_settings.bloom;
-    else if (key == "vignette") sanitized = m_settings.vignette;
-    else if (key == "sharpen") sanitized = m_settings.sharpen;
-    else if (key == "chromatic-aberration") sanitized = m_settings.chromaticAberration;
-
-    log::info(
-        "[ZaidFX][slider->renderer] {} requested={:.4f}, final={:.4f}",
-        key,
-        value,
-        sanitized
-    );
-}
-
-void PostProcessRenderer::logRenderStateOnce(GLint framebuffer, int width, int height) {
-    if (!m_settings.debugLogging || m_lastLoggedRenderRevision == m_settingsRevision) {
-        return;
-    }
-
-    m_lastLoggedRenderRevision = m_settingsRevision;
-    log::info(
-        "[ZaidFX][render] revision={} framebuffer={} program={} texture={} size={}x{} "
-        "preset={} red-test={} intensity={:.2f}, brightness={:.2f}, exposure={:.2f}, "
-        "contrast={:.2f}, saturation={:.2f}, gamma={:.2f}, bloom={:.2f}, vignette={:.2f}, "
-        "sharpen={:.2f}, chromatic-aberration={:.2f}, tonemapping={:.2f}",
-        m_settingsRevision,
-        framebuffer,
-        m_shader.programID(),
-        m_captureTexture,
-        width,
-        height,
-        m_settings.preset,
-        m_settings.debugRedScreen,
-        m_settings.intensity,
-        m_settings.brightness,
-        m_settings.exposure,
-        m_settings.contrast,
-        m_settings.saturation,
-        m_settings.gamma,
-        m_settings.bloom,
-        m_settings.vignette,
-        m_settings.sharpen,
-        m_settings.chromaticAberration,
-        m_settings.tonemapping
-    );
 }
 
 } // namespace zaidfx
