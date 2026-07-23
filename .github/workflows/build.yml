@@ -38,11 +38,28 @@ jobs:
           build-config: Release
           export-symbols: false
 
+      - name: Prepare named package
+        id: package
+        shell: bash
+        run: |
+          VERSION="$(jq -r '.version' mod.json)"
+          OUTPUT_DIR="${{ steps.build.outputs.build-output }}"
+          SOURCE="$(find "$OUTPUT_DIR" -maxdepth 1 -type f -name '*.geode' -print -quit)"
+          TARGET="$OUTPUT_DIR/Zaid.Fx.Mod-$VERSION.geode"
+
+          test -n "$SOURCE"
+          if [ "$SOURCE" != "$TARGET" ]; then
+            mv "$SOURCE" "$TARGET"
+          fi
+
+          echo "path=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$TARGET")" >> "$GITHUB_OUTPUT"
+
       - name: Upload package
         uses: actions/upload-artifact@v7
         with:
-          name: Zaid-FX-MOD-Android64
-          path: ${{ steps.build.outputs.build-output }}/*.geode
+          name: Zaid.Fx.Mod-${{ github.sha }}-Android64
+          path: ${{ steps.package.outputs.path }}
           if-no-files-found: error
 
       - name: Publish versioned release
@@ -52,16 +69,31 @@ jobs:
         shell: bash
         run: |
           VERSION="$(jq -r '.version' mod.json)"
+          PACKAGE="${{ steps.package.outputs.path }}"
+          DESIRED_NAME="${{ steps.package.outputs.name }}"
 
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "Release $VERSION already exists; skipping."
-            exit 0
+          if gh release view "$VERSION" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$VERSION" "$PACKAGE" \
+              --repo "${{ github.repository }}" \
+              --clobber
+
+            while IFS= read -r ASSET_NAME; do
+              if [[ "$ASSET_NAME" == *.geode && "$ASSET_NAME" != "$DESIRED_NAME" ]]; then
+                gh release delete-asset "$VERSION" "$ASSET_NAME" \
+                  --repo "${{ github.repository }}" \
+                  --yes
+              fi
+            done < <(
+              gh release view "$VERSION" \
+                --repo "${{ github.repository }}" \
+                --json assets \
+                --jq '.assets[].name'
+            )
+          else
+            gh release create "$VERSION" "$PACKAGE" \
+              --repo "${{ github.repository }}" \
+              --target "${{ github.sha }}" \
+              --title "Zaid-FX-MOD $VERSION" \
+              --notes-file release-notes.md \
+              --latest
           fi
-
-          gh release create "$VERSION" \
-            "${{ steps.build.outputs.build-output }}"/*.geode \
-            --repo "${{ github.repository }}" \
-            --target "${{ github.sha }}" \
-            --title "Zaid-FX-MOD $VERSION" \
-            --notes-file release-notes.md \
-            --latest
