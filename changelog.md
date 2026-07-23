@@ -1,18 +1,22 @@
+# v0.3.0
+
+- Removed personal contact information from the mod metadata and documentation.
+- Replaced the misleading RTX preset name with Glow.
+- Removed the menu diagnostic button, public debug settings and the unused Node IDs dependency.
+- Simplified preset application and renderer state management.
+- Replaced direct filesystem string conversion with Geode file and path utilities.
+- Reduced routine logging while preserving actionable shader and OpenGL errors.
+- Preserved the source frame alpha in the final shader output.
+- Clarified that highlight glow is a lightweight single-pass effect.
+
 # v0.2.1
 
-- Fixed presets that previously changed only the selected text without reliably applying a visible result.
-- Added one central `applyPreset(presetId)` flow that loads all values, updates Geode settings and sliders, updates the active renderer state and queues uniform updates immediately.
-- Added clearly differentiated Default, Cinematic, Vibrant, Dark, Retro and RTX profiles.
-- Prevented delayed setting events from switching a freshly applied preset to Custom when the values still match that preset.
-- Manual slider changes now switch the preset label to Custom without disabling effects.
-- Added lightweight bloom, chromatic aberration and ACES-style tone mapping controls and GLSL uniforms.
-- Added temporary logs for selected preset, internal ID, loaded values, assigned sliders, renderer values, uniform updates and final shader refresh.
-- Replaced the previous logo resources with the exact image supplied by Zaid Navarro, center-cropped without stretching.
-- Retained a safe fallback icon if the in-game logo texture cannot be loaded.
+- Fixed preset application and added Default, Cinematic, Vibrant, Dark, Retro and experimental glow-focused profiles.
+- Added highlight glow, chromatic aberration and tone mapping controls.
+- Added a fallback icon for the temporary in-game status button.
 
 # v0.2.0
 
-- Moved post-processing to `CCEGLView::swapBuffers`, after the complete menu or gameplay frame has been rendered and immediately before Android presents it.
-- Copies the final bound framebuffer into a fullscreen texture with `glCopyTexSubImage2D`.
-- Draws the captured texture back to the same framebuffer with a clip-space GLSL quad.
-- Added shader diagnostics and the red framebuffer test.
+- Moved post-processing to `CCEGLView::swapBuffers` immediately before frame presentation.
+- Added framebuffer capture and a fullscreen shader pass.
+- Added shader diagnostics for development.
