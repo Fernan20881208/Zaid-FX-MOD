@@ -1,8 +1,12 @@
 # Zaid-FX-MOD
 
-Android-first post-processing and visual-filter framework for Geometry Dash using Geode.
+<p align="center">
+  <img src="logo.png" width="220" alt="Zaid-FX-MOD logo">
+</p>
 
-> **v0.1.0 foundation:** the current build provides Geode settings, packaged GLSL shaders, a reusable `CCGLProgram` wrapper and verified Android64 CI. Global framebuffer post-processing is the next development milestone.
+Android-first final-frame post-processing and visual filters for Geometry Dash using Geode.
+
+> **v0.2.0:** the mod intercepts the framebuffer immediately before Android presents it, copies the completed menu or gameplay frame to a texture, and draws a fullscreen GLSL quad back to the same framebuffer.
 
 ## Download and installation
 
@@ -14,15 +18,75 @@ Current target:
 - Geode `5.7.1`
 - Android ARM64 (`Android64` / `arm64-v8a`)
 
-## Planned effects
+## Final-frame rendering pipeline
 
-- Exposure, contrast, saturation and gamma
-- Sharpening and vignette
-- OLED, Vibrant, Cinematic, Competitive and **RTX Fake** presets
-- Quarter-resolution bloom
-- Dynamic quality based on frame time
+The effect runs from `CCEGLView::swapBuffers`, after Geometry Dash has completed the frame and immediately before the platform presents it:
 
-**RTX Fake** means a stylized combination of bloom, tone mapping and sharpening. It is not hardware ray tracing.
+```text
+Geometry Dash menu or PlayLayer
+        ↓
+Final bound framebuffer
+        ↓ glCopyTexSubImage2D
+Captured fullscreen texture
+        ↓ GLSL program + uniforms
+Fullscreen triangle-strip quad
+        ↓
+Same framebuffer
+        ↓
+swapBuffers
+```
+
+This avoids the previous problem where the original scene could be rendered outside the off-screen texture or drawn over the processed result.
+
+## Live visual controls
+
+Every control is sent to the shader on every processed frame:
+
+- Effect intensity: `u_intensity`
+- Brightness: `u_brightness`
+- Exposure: `u_exposure`
+- Contrast: `u_contrast`
+- Saturation: `u_saturation`
+- Gamma: `u_gamma`
+- Vignette: `u_vignette`
+- Sharpen: `u_sharpen`
+- Pixel size: `u_texelSize`
+- Red framebuffer test: `u_debugRed`
+
+Saturation uses `0` for grayscale, `1` for the original color level and values above `1` for stronger colors. Exposure uses stops, so `-2` produces one quarter of the original light level before the remaining corrections.
+
+Presets write their values into the real Geode settings. Moving an individual slider changes the selected preset to **Custom**, preventing a second configuration copy from replacing the slider value.
+
+## Red framebuffer test
+
+Enable **Enable effects**, then turn on **Red framebuffer test**. The complete menu or level should become solid red. This confirms that the final framebuffer hook, program, texture and fullscreen draw are connected.
+
+After confirming the red test, disable it and test:
+
+- Exposure `-2`: strongly darker image.
+- Contrast `0.5`: visibly flatter image.
+- Saturation `0`: grayscale.
+- Disable effects: immediate return to the original image.
+
+## Diagnostics
+
+`Shader debug logging` records:
+
+- Every `swapBuffers` render-hook call.
+- Bound framebuffer and viewport dimensions.
+- Shader compile and link errors.
+- GLSL program ID and capture-texture ID.
+- Every validated uniform and its value.
+- Final fullscreen-quad draw confirmation.
+- OpenGL errors from texture capture or drawing.
+
+The renderer restores the previous program, framebuffer, viewport, scissor, blending, depth, stencil, culling, texture bindings, buffer bindings, write masks and vertex-attribute state before returning to Geometry Dash.
+
+## Updates inside Geode
+
+Geode delivers automatic in-app updates through the official **Geode Index**. GitHub releases alone are not enough. The repository and versioned release workflow are index-ready; after the one-time authenticated index submission is approved, future versions can be delivered through `geode index mods update` and will appear directly in Geode.
+
+See [`docs/GEODE_INDEX.md`](docs/GEODE_INDEX.md) for the remaining authenticated submission step.
 
 ## Developer and contact
 
@@ -37,30 +101,10 @@ These contact options are also exposed inside Geode: Instagram as the homepage, 
 
 ## Build from source
 
-Install the Geode CLI, SDK binaries and Android NDK, then run:
-
 ```bash
 geode sdk install-binaries -p android64
 geode build -p android64
 ```
-
-The package should be produced under `build-android64`.
-
-## Repository structure
-
-- `src/rendering`: shader API and future framebuffer pipeline
-- `src/settings`: typed access to Geode settings
-- `resources/shaders`: packaged GLSL ES shaders
-- `.github/workflows`: verified Android64 build and release workflow
-- `docs/ROADMAP.md`: implementation milestones and validation gates
-
-## Safety and compatibility goals
-
-- Never modify gameplay physics or hitboxes
-- Restore OpenGL resources after Android context loss
-- Avoid overriding Geometry Dash shader triggers
-- Allow effects to be disabled immediately
-- Prefer reduced-resolution multipass effects on mobile GPUs
 
 ## License
 

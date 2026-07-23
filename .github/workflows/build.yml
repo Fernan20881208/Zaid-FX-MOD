@@ -34,21 +34,23 @@ jobs:
           path: ${{ steps.build.outputs.build-output }}/*.geode
           if-no-files-found: error
 
-      - name: Publish v0.1.0 release
+      - name: Publish versioned release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if gh release view v0.1.0 >/dev/null 2>&1; then
-            echo "Release v0.1.0 already exists; skipping."
+          VERSION="$(jq -r '.version' mod.json)"
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; skipping."
             exit 0
           fi
 
-          gh release create v0.1.0 \
+          gh release create "$VERSION" \
             "${{ steps.build.outputs.build-output }}"/*.geode \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "Zaid-FX-MOD v0.1.0" \
+            --title "Zaid-FX-MOD $VERSION" \
             --notes-file changelog.md \
             --latest

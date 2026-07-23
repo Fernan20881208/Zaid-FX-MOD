@@ -6,7 +6,12 @@ namespace zaidfx {
 
 struct Settings final {
     bool enabled = false;
+    bool debugLogging = true;
+    bool debugRedScreen = false;
     std::string preset = "Clean";
+
+    float intensity = 1.0f;
+    float brightness = 0.0f;
     float exposure = 0.0f;
     float contrast = 1.0f;
     float saturation = 1.0f;
@@ -15,6 +20,7 @@ struct Settings final {
     float sharpen = 0.0f;
 
     static Settings read();
+    void sanitize();
 };
 
 } // namespace zaidfx
