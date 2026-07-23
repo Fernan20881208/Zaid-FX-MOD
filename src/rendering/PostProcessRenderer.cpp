@@ -48,6 +48,11 @@ struct GLState final {
     AttributeState texCoord;
 };
 
+struct BoolReset final {
+    bool& value;
+    ~BoolReset() { value = false; }
+};
+
 AttributeState captureAttribute(GLuint index) {
     AttributeState state;
     glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &state.enabled);
@@ -173,30 +178,37 @@ PostProcessRenderer& PostProcessRenderer::get() {
 void PostProcessRenderer::initialize() {
     if (m_initialized) return;
     m_settings = Settings::read();
+    m_loggedPipelineState = false;
     m_initialized = true;
 }
 
 void PostProcessRenderer::reloadSettings() {
     auto const previousQuality = m_settings.qualityLevel();
     m_settings = Settings::read();
+    m_loggedPipelineState = false;
     if (previousQuality != m_settings.qualityLevel()) invalidatePipeline();
 }
 
 void PostProcessRenderer::setBool(std::string_view key, bool value) {
     if (key == "enabled") {
         m_settings.enabled = value;
+        m_loggedPipelineState = false;
         if (value) invalidatePipeline();
         return;
     }
     if (!m_settings.set(key, value)) {
         log::warn("[ZaidFX] unknown boolean setting: {}", key);
+        return;
     }
+    m_loggedPipelineState = false;
 }
 
 void PostProcessRenderer::setFloat(std::string_view key, float value) {
     if (!m_settings.set(key, value)) {
         log::warn("[ZaidFX] unknown numeric setting: {}", key);
+        return;
     }
+    m_loggedPipelineState = false;
 }
 
 void PostProcessRenderer::setString(std::string_view key, std::string value) {
@@ -210,6 +222,7 @@ void PostProcessRenderer::setString(std::string_view key, std::string value) {
         log::warn("[ZaidFX] invalid quality value");
         return;
     }
+    m_loggedPipelineState = false;
     if (previousQuality != m_settings.qualityLevel()) invalidatePipeline();
 }
 
@@ -237,6 +250,7 @@ void PostProcessRenderer::setGameplaySpeed(float speed) {
 
 void PostProcessRenderer::invalidatePipeline() {
     m_pipelineDirty = true;
+    m_loggedPipelineState = false;
     m_retryFrames = 0;
 }
 
@@ -252,6 +266,17 @@ bool PostProcessRenderer::isPipelineReady() const {
 }
 
 void PostProcessRenderer::processPresentedFrame() {
+    if (m_processingFrame) {
+        if (!m_loggedReentry) {
+            log::warn("[ZaidFX] ignored a re-entrant post-process call; the shader is applied once per presented frame");
+            m_loggedReentry = true;
+        }
+        return;
+    }
+
+    m_processingFrame = true;
+    BoolReset processingReset { m_processingFrame };
+
     auto& recorder = ScreenRecorder::get();
     auto const renderEffects = shouldRender();
     auto const recordFrame = recorder.wantsFrames();
@@ -304,6 +329,28 @@ void PostProcessRenderer::processPresentedFrame() {
             invalidatePipeline();
             glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(state.framebuffer));
             glViewport(x, y, width, height);
+        }
+        else if (!m_loggedPipelineState) {
+            auto const preset = Mod::get()->getSettingValue<std::string>("preset");
+            log::debug(
+                "[ZaidFX] preset={} framebuffer={} viewport={}x{} captureTex={} lightingFbo={} lighting={}x{} lightingEffects={} finalEffects={} intensity={} exposure={} contrast={} saturation={} gamma={}",
+                preset,
+                state.framebuffer,
+                width,
+                height,
+                m_captureTexture,
+                m_lightingFramebuffer,
+                m_lightingWidth,
+                m_lightingHeight,
+                m_settings.hasLightingEffects(),
+                m_settings.hasFinalEffects(),
+                m_settings.get(FloatParam::EffectIntensity),
+                m_settings.get(FloatParam::Exposure),
+                m_settings.get(FloatParam::Contrast),
+                m_settings.get(FloatParam::Saturation),
+                m_settings.get(FloatParam::Gamma)
+            );
+            m_loggedPipelineState = true;
         }
     }
     else {
