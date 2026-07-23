@@ -5,34 +5,26 @@
   },
   "id": "zaid.zaid-fx-mod",
   "name": "Zaid-FX-MOD",
-  "version": "v0.2.1",
-  "developer": "Zaid Navarro",
-  "description": "Final-frame Android post-processing, live presets and visual filters for Geometry Dash using Geode.",
+  "version": "v0.3.0",
+  "developer": "Zaid",
+  "description": "Configurable color grading and lightweight screen effects for Geometry Dash on Android.",
   "links": {
-    "source": "https://github.com/Fernan20881208/Zaid-FX-MOD",
-    "homepage": "https://www.instagram.com/Zaid.nvr/",
-    "community": "https://wa.me/523345158805"
+    "source": "https://github.com/Fernan20881208/Zaid-FX-MOD"
   },
   "issues": {
-    "info": "Report Android device, GPU, Geode version and attach the latest crash log. Email: zaidnavarrosaucedo@gmail.com",
+    "info": "Include your device, GPU, Android, Geometry Dash and Geode versions, plus the latest crash log.",
     "url": "https://github.com/Fernan20881208/Zaid-FX-MOD/issues"
-  },
-  "dependencies": {
-    "geode.node-ids": ">=v1.23.3"
   },
   "tags": [
     "customization",
     "enhancement",
-    "performance",
-    "offline"
+    "offline",
+    "universal"
   ],
   "resources": {
     "files": [
       "resources/shaders/*.vert",
       "resources/shaders/*.frag"
-    ],
-    "sprites": [
-      "resources/ZaidFXLogo.png"
     ]
   },
   "settings": {
@@ -43,21 +35,21 @@
     "enabled": {
       "type": "bool",
       "name": "Enable effects",
-      "description": "Processes the final framebuffer immediately before Android presents it.",
+      "description": "Apply the selected effects to the final game frame.",
       "default": false
     },
     "preset": {
       "type": "string",
       "name": "Preset",
-      "description": "Selecting a preset immediately updates every slider, the active renderer state and all shader uniforms. Manual slider changes switch this to Custom.",
+      "description": "Choose a starting profile. Changing a slider switches the profile to Custom.",
       "default": "Default",
-      "one-of": ["Custom", "Default", "Cinematic", "Vibrant", "Dark", "Retro", "RTX"],
+      "one-of": ["Custom", "Default", "Cinematic", "Vibrant", "Dark", "Retro", "Glow"],
       "enable-if": "enabled"
     },
     "effect-intensity": {
       "type": "float",
       "name": "Effect intensity",
-      "description": "Blends between the original frame (0) and the processed frame (1).",
+      "description": "Blend between the original frame and the processed frame.",
       "default": 1.0,
       "min": 0.0,
       "max": 1.0,
@@ -76,7 +68,7 @@
     "exposure": {
       "type": "float",
       "name": "Exposure",
-      "description": "Exposure in stops, applied with exp2 in the shader.",
+      "description": "Adjust exposure in stops.",
       "default": 0.0,
       "min": -2.0,
       "max": 2.0,
@@ -95,7 +87,7 @@
     "saturation": {
       "type": "float",
       "name": "Saturation",
-      "description": "0 is grayscale, 1 is original saturation and values above 1 increase color intensity.",
+      "description": "Use 0 for grayscale and 1 for the original saturation.",
       "default": 1.0,
       "min": 0.0,
       "max": 3.0,
@@ -113,8 +105,8 @@
     },
     "bloom": {
       "type": "float",
-      "name": "Bloom",
-      "description": "Adds a lightweight highlight glow in the final fullscreen pass.",
+      "name": "Highlight glow",
+      "description": "Add a small single-pass glow around bright areas.",
       "default": 0.0,
       "min": 0.0,
       "max": 1.0,
@@ -142,7 +134,7 @@
     "chromatic-aberration": {
       "type": "float",
       "name": "Chromatic aberration",
-      "description": "Separates RGB sampling slightly toward the screen edges.",
+      "description": "Offset the red and blue channels near the screen edges.",
       "default": 0.0,
       "min": 0.0,
       "max": 1.0,
@@ -151,30 +143,13 @@
     },
     "tonemapping": {
       "type": "float",
-      "name": "Tonemapping",
-      "description": "Blends toward an ACES-style tone-mapped result.",
+      "name": "Tone mapping",
+      "description": "Blend toward an ACES-style tone curve.",
       "default": 0.0,
       "min": 0.0,
       "max": 1.0,
       "control": { "slider": true, "slider-step": 0.05, "input": true },
       "enable-if": "enabled"
-    },
-    "diagnostics-title": {
-      "type": "title",
-      "name": "Diagnostics"
-    },
-    "debug-red-screen": {
-      "type": "bool",
-      "name": "Red framebuffer test",
-      "description": "Temporarily forces the final fullscreen quad to solid red.",
-      "default": false,
-      "enable-if": "enabled"
-    },
-    "debug-logging": {
-      "type": "bool",
-      "name": "Shader and preset debug logging",
-      "description": "Logs preset selection, internal IDs, loaded values, slider assignments, uniforms and final shader updates.",
-      "default": true
     }
   }
 }
