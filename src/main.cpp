@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/loader/Loader.hpp>
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/CCEGLView.hpp>
 
@@ -6,8 +7,10 @@
 
 #include <array>
 #include <cmath>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 using namespace geode::prelude;
 
@@ -57,6 +60,8 @@ constexpr std::array<FloatSettingBinding, 11> kFloatSettings {{
 }};
 
 bool s_applyingPreset = false;
+bool s_presetApplyQueued = false;
+std::optional<std::string> s_pendingPreset;
 
 PresetValues const* findPreset(std::string_view id) {
     for (auto const& preset : kPresets) {
@@ -76,7 +81,7 @@ FloatSettingBinding const* findFloatSetting(std::string_view key) {
     return nullptr;
 }
 
-void applyPreset(std::string_view id) {
+void applyPresetNow(std::string_view id) {
     auto const* preset = findPreset(id);
     if (!preset) {
         log::warn("[ZaidFX] unknown preset: {}", id);
@@ -87,12 +92,34 @@ void applyPreset(std::string_view id) {
     auto& renderer = zaidfx::PostProcessRenderer::get();
 
     s_applyingPreset = true;
+    mod->setSettingValue<std::string>("preset", std::string(preset->id));
+
     for (auto const& setting : kFloatSettings) {
         auto const value = preset->*setting.member;
         mod->setSettingValue<double>(std::string(setting.key), static_cast<double>(value));
         renderer.setFloat(setting.key, value);
     }
+
     s_applyingPreset = false;
+}
+
+void queuePresetApply(std::string id) {
+    s_pendingPreset = std::move(id);
+    if (s_presetApplyQueued) {
+        return;
+    }
+
+    s_presetApplyQueued = true;
+    geode::queueInMainThread([] {
+        s_presetApplyQueued = false;
+        if (!s_pendingPreset) {
+            return;
+        }
+
+        auto preset = std::move(*s_pendingPreset);
+        s_pendingPreset.reset();
+        applyPresetNow(preset);
+    });
 }
 
 bool matchesSelectedPreset(std::string_view key, double value) {
@@ -111,7 +138,7 @@ bool matchesSelectedPreset(std::string_view key, double value) {
 void handleFloatSetting(std::string_view key, double value) {
     zaidfx::PostProcessRenderer::get().setFloat(key, static_cast<float>(value));
 
-    if (s_applyingPreset || matchesSelectedPreset(key, value)) {
+    if (s_applyingPreset || s_pendingPreset || matchesSelectedPreset(key, value)) {
         return;
     }
 
@@ -127,9 +154,16 @@ void registerSettingListeners() {
     });
 
     listenForSettingChanges<std::string>("preset", [](std::string value) {
-        if (value != "Custom") {
-            applyPreset(value);
+        if (s_applyingPreset) {
+            return;
         }
+
+        if (value == "Custom") {
+            s_pendingPreset.reset();
+            return;
+        }
+
+        queuePresetApply(std::move(value));
     });
 
     listenForSettingChanges<double>("effect-intensity", [](double value) { handleFloatSetting("effect-intensity", value); });
@@ -162,10 +196,9 @@ $execute {
     auto selected = Mod::get()->getSettingValue<std::string>("preset");
     if (selected == "RTX") {
         selected = "Glow";
-        Mod::get()->setSettingValue<std::string>("preset", selected);
     }
 
     if (selected != "Custom") {
-        applyPreset(selected);
+        applyPresetNow(selected);
     }
 }
