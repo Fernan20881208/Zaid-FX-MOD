@@ -16,7 +16,6 @@ This release combines the current development cycle:
 - stable bloom, emissive lighting, ambient occlusion, reflections, HDR, local contrast, specular highlights, light rays, depth separation and sharpen;
 - reactive lighting for gameplay events;
 - Low, Medium, High and Ultra quality levels;
-- a floating internal Android H.264/MP4 screen recorder with **Record**, **Stop**, **Save** and **Delete** actions;
 - removal of personal contact information, development-only controls and unused dependencies.
 
 ## Presets
@@ -46,23 +45,6 @@ The settings are organized into Bloom, Emissive Lighting, Ambient Occlusion, Ref
 
 Expensive effects are skipped when disabled. Render targets and shaders are reused instead of being recreated every frame. The selected quality controls the reduced lighting-buffer resolution and shader sample count.
 
-## Floating internal recorder
-
-A small **REC** overlay appears in a safe top-right position in the main menu, level browser, level selector and gameplay. It is attached independently from normal menu layouts, so it does not move, resize or deform Geometry Dash buttons.
-
-- **REC** — inactive and ready to start.
-- **STOP** — recording; the button uses a subtle pulse.
-- **SAVE** — a temporary MP4 is ready to keep or delete.
-
-The overlay uses built-in Geometry Dash button resources and has a text fallback if the preferred sprite cannot be created.
-
-1. Press **REC** and confirm recording.
-2. Play normally; the recorder captures the final processed image.
-3. Press **STOP** from any supported overlay.
-4. Choose **Save** to keep the MP4 or **Delete** to discard it.
-
-Saved files are placed in the mod save directory under `recordings`. The current implementation records video only; game audio is not included. Recording resources are not allocated until recording begins.
-
 ## Rendering architecture
 
 The mod hooks `CCEGLView::swapBuffers` through Geode. It copies the completed framebuffer to a reusable full-resolution RGBA texture. Optional lighting effects are evaluated into a reduced-resolution RGBA target where RGB contains additive lighting and alpha contains ambient occlusion. The final pass starts from the original full-resolution texture, combines the optional lighting data, applies the enabled finishing stages and writes back to the presented framebuffer.
@@ -77,8 +59,7 @@ ZaidLux uses stable screen-space approximations. It is not hardware ray tracing 
 - Geode 5.7.1
 - Device GPU support and performance vary
 - Screen-space category masks for player, objects and particles are approximations
-- The recorder currently produces video-only MP4 files
-- Final visual behavior and MP4 playback should be tested on real Android devices
+- Final visual behavior should be tested on real Android devices
 
 ## Building
 
