@@ -3,29 +3,64 @@
 #include <Geode/Geode.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <iterator>
 #include <utility>
 
 using namespace geode::prelude;
 
+namespace {
+
+constexpr float kEffectEpsilon = 0.001f;
+constexpr std::array<std::string_view, 4> kQualityNames {
+    "Low",
+    "Medium",
+    "High",
+    "Ultra"
+};
+constexpr std::array<float, 4> kQualityScales {
+    0.25f,
+    0.375f,
+    0.50f,
+    0.75f
+};
+
+template <class Definition, std::size_t Size>
+Definition const* findDefinition(
+    std::array<Definition, Size> const& definitions,
+    std::string_view key
+) {
+    auto const match = std::find_if(
+        definitions.begin(),
+        definitions.end(),
+        [key](Definition const& definition) {
+            return definition.key == key;
+        }
+    );
+
+    return match == definitions.end() ? nullptr : &*match;
+}
+
+bool isKnownQuality(std::string_view quality) {
+    return std::find(kQualityNames.begin(), kQualityNames.end(), quality) !=
+        kQualityNames.end();
+}
+
+bool isNear(float value, float expected) {
+    return std::abs(value - expected) < kEffectEpsilon;
+}
+
+} // namespace
+
 namespace zaidfx {
 
 BoolDefinition const* findBoolDefinition(std::string_view key) {
-    for (auto const& definition : kBoolDefinitions) {
-        if (definition.key == key) {
-            return &definition;
-        }
-    }
-    return nullptr;
+    return findDefinition(kBoolDefinitions, key);
 }
 
 FloatDefinition const* findFloatDefinition(std::string_view key) {
-    for (auto const& definition : kFloatDefinitions) {
-        if (definition.key == key) {
-            return &definition;
-        }
-    }
-    return nullptr;
+    return findDefinition(kFloatDefinitions, key);
 }
 
 Settings Settings::read() {
@@ -35,14 +70,14 @@ Settings Settings::read() {
     settings.enabled = mod->getSettingValue<bool>("enabled");
     settings.quality = mod->getSettingValue<std::string>("quality");
 
-    for (auto const& definition : kBoolDefinitions) {
-        settings.booleans[index(definition.id)] =
-            mod->getSettingValue<bool>(definition.key);
+    for (auto const& setting : kBoolDefinitions) {
+        settings.booleans[index(setting.id)] =
+            mod->getSettingValue<bool>(setting.key);
     }
 
-    for (auto const& definition : kFloatDefinitions) {
-        settings.floats[index(definition.id)] = static_cast<float>(
-            mod->getSettingValue<double>(definition.key)
+    for (auto const& setting : kFloatDefinitions) {
+        settings.floats[index(setting.id)] = static_cast<float>(
+            mod->getSettingValue<double>(setting.key)
         );
     }
 
@@ -59,26 +94,16 @@ float Settings::get(FloatParam id) const {
 }
 
 int Settings::qualityLevel() const {
-    if (quality == "Low") {
-        return 0;
+    auto const match = std::find(kQualityNames.begin(), kQualityNames.end(), quality);
+    if (match == kQualityNames.end()) {
+        return 1;
     }
-    if (quality == "High") {
-        return 2;
-    }
-    if (quality == "Ultra") {
-        return 3;
-    }
-    return 1;
+
+    return static_cast<int>(std::distance(kQualityNames.begin(), match));
 }
 
 float Settings::qualityScale() const {
-    switch (qualityLevel()) {
-        case 0: return 0.25f;
-        case 1: return 0.375f;
-        case 2: return 0.50f;
-        case 3: return 0.75f;
-        default: return 0.375f;
-    }
+    return kQualityScales[static_cast<std::size_t>(qualityLevel())];
 }
 
 bool Settings::hasLightingEffects() const {
@@ -90,18 +115,18 @@ bool Settings::hasLightingEffects() const {
 }
 
 bool Settings::hasFinalEffects() const {
-    auto const colorNeutral =
-        std::abs(get(FloatParam::Exposure) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Contrast) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Saturation) - 50.0f) < 0.001f &&
-        get(FloatParam::Vibrance) < 0.001f &&
-        std::abs(get(FloatParam::Gamma) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Temperature) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Tint) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Highlights) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::Shadows) - 50.0f) < 0.001f &&
-        std::abs(get(FloatParam::ColorWhitePoint) - 100.0f) < 0.001f &&
-        get(FloatParam::ColorBlackPoint) < 0.001f;
+    auto const colorIsNeutral =
+        isNear(get(FloatParam::Exposure), 50.0f) &&
+        isNear(get(FloatParam::Contrast), 50.0f) &&
+        isNear(get(FloatParam::Saturation), 50.0f) &&
+        isNear(get(FloatParam::Vibrance), 0.0f) &&
+        isNear(get(FloatParam::Gamma), 50.0f) &&
+        isNear(get(FloatParam::Temperature), 50.0f) &&
+        isNear(get(FloatParam::Tint), 50.0f) &&
+        isNear(get(FloatParam::Highlights), 50.0f) &&
+        isNear(get(FloatParam::Shadows), 50.0f) &&
+        isNear(get(FloatParam::ColorWhitePoint), 100.0f) &&
+        isNear(get(FloatParam::ColorBlackPoint), 0.0f);
 
     return get(BoolParam::HDREnabled) ||
         get(BoolParam::LocalContrastEnabled) ||
@@ -109,10 +134,10 @@ bool Settings::hasFinalEffects() const {
         get(BoolParam::DepthBlurEnabled) ||
         get(BoolParam::SharpenEnabled) ||
         get(BoolParam::ReactiveEnabled) ||
-        get(FloatParam::Vignette) > 0.001f ||
-        get(FloatParam::ChromaticAberration) > 0.001f ||
-        get(FloatParam::FilmGrain) > 0.001f ||
-        !colorNeutral;
+        get(FloatParam::Vignette) > kEffectEpsilon ||
+        get(FloatParam::ChromaticAberration) > kEffectEpsilon ||
+        get(FloatParam::FilmGrain) > kEffectEpsilon ||
+        !colorIsNeutral;
 }
 
 bool Settings::hasVisibleEffects() const {
@@ -120,31 +145,31 @@ bool Settings::hasVisibleEffects() const {
 }
 
 bool Settings::set(std::string_view key, bool value) {
-    auto const* definition = findBoolDefinition(key);
-    if (!definition) {
+    auto const* setting = findBoolDefinition(key);
+    if (!setting) {
         return false;
     }
 
-    booleans[index(definition->id)] = value;
+    booleans[index(setting->id)] = value;
     return true;
 }
 
 bool Settings::set(std::string_view key, float value) {
-    auto const* definition = findFloatDefinition(key);
-    if (!definition) {
+    auto const* setting = findFloatDefinition(key);
+    if (!setting) {
         return false;
     }
 
-    floats[index(definition->id)] = std::clamp(
+    floats[index(setting->id)] = std::clamp(
         value,
-        definition->minValue,
-        definition->maxValue
+        setting->minValue,
+        setting->maxValue
     );
     return true;
 }
 
 bool Settings::setQuality(std::string value) {
-    if (value != "Low" && value != "Medium" && value != "High" && value != "Ultra") {
+    if (!isKnownQuality(value)) {
         return false;
     }
 
@@ -153,13 +178,13 @@ bool Settings::setQuality(std::string value) {
 }
 
 void Settings::sanitize() {
-    if (quality != "Low" && quality != "Medium" && quality != "High" && quality != "Ultra") {
+    if (!isKnownQuality(quality)) {
         quality = "Medium";
     }
 
-    for (auto const& definition : kFloatDefinitions) {
-        auto& value = floats[index(definition.id)];
-        value = std::clamp(value, definition.minValue, definition.maxValue);
+    for (auto const& setting : kFloatDefinitions) {
+        auto& value = floats[index(setting.id)];
+        value = std::clamp(value, setting.minValue, setting.maxValue);
     }
 
     if (get(FloatParam::ColorBlackPoint) >= get(FloatParam::ColorWhitePoint)) {
