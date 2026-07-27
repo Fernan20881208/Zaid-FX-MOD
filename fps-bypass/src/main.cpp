@@ -10,59 +10,59 @@ using namespace geode::prelude;
 
 namespace {
 
-constexpr std::int64_t kMinimumFPS = 30;
-constexpr std::int64_t kMaximumFPS = 360;
-constexpr double kFallbackInterval = 1.0 / 60.0;
+constexpr std::int64_t kMinFps = 30;
+constexpr std::int64_t kMaxFps = 360;
+constexpr double kDefaultInterval = 1.0 / 60.0;
 
-bool s_applyingInterval = false;
-double s_gameRequestedInterval = kFallbackInterval;
+bool s_isApplyingOverride = false;
+double s_lastGameInterval = kDefaultInterval;
 
-bool isValidInterval(double interval) {
+bool isUsableInterval(double interval) {
     return std::isfinite(interval) && interval > 0.0 && interval <= 1.0;
 }
 
-bool isBypassEnabled() {
+bool bypassEnabled() {
     return Mod::get()->getSettingValue<bool>("enabled");
 }
 
-std::int64_t targetFPS() {
-    return std::clamp(
-        Mod::get()->getSettingValue<std::int64_t>("target-fps"),
-        kMinimumFPS,
-        kMaximumFPS
-    );
+std::int64_t requestedFps() {
+    auto const configuredFps =
+        Mod::get()->getSettingValue<std::int64_t>("target-fps");
+    return std::clamp(configuredFps, kMinFps, kMaxFps);
 }
 
-double targetInterval() {
-    return 1.0 / static_cast<double>(targetFPS());
+double intervalFor(std::int64_t fps) {
+    return 1.0 / static_cast<double>(fps);
 }
 
-void applyCurrentSetting() {
+std::int64_t fpsFor(double interval) {
+    return static_cast<std::int64_t>(std::lround(1.0 / interval));
+}
+
+void applySettings() {
     auto* director = cocos2d::CCDirector::sharedDirector();
     if (!director) {
         return;
     }
 
-    auto const interval = isBypassEnabled()
-        ? targetInterval()
-        : s_gameRequestedInterval;
+    auto const enabled = bypassEnabled();
+    auto const fps = requestedFps();
+    auto const interval = enabled ? intervalFor(fps) : s_lastGameInterval;
 
-    s_applyingInterval = true;
+    s_isApplyingOverride = true;
     director->setAnimationInterval(interval);
-    s_applyingInterval = false;
+    s_isApplyingOverride = false;
 
     log::info(
         "[ZaidFPS] {} at {} FPS",
-        isBypassEnabled() ? "enabled" : "disabled",
-        isBypassEnabled()
-            ? targetFPS()
-            : static_cast<std::int64_t>(std::lround(1.0 / interval))
+        enabled ? "enabled" : "disabled",
+        enabled ? fps : fpsFor(interval)
     );
 }
 
-void queueApply() {
+void scheduleApply() {
     geode::queueInMainThread([] {
-        applyCurrentSetting();
+        applySettings();
     });
 }
 
@@ -70,36 +70,34 @@ void queueApply() {
 
 class $modify(ZaidFPSDirector, cocos2d::CCDirector) {
     void setAnimationInterval(double interval) {
-        if (!s_applyingInterval && isValidInterval(interval)) {
-            s_gameRequestedInterval = interval;
+        if (!s_isApplyingOverride && isUsableInterval(interval)) {
+            s_lastGameInterval = interval;
         }
 
-        auto const appliedInterval =
-            !s_applyingInterval && isBypassEnabled()
-                ? targetInterval()
-                : interval;
-
-        cocos2d::CCDirector::setAnimationInterval(appliedInterval);
+        auto const shouldOverride = !s_isApplyingOverride && bypassEnabled();
+        cocos2d::CCDirector::setAnimationInterval(
+            shouldOverride ? intervalFor(requestedFps()) : interval
+        );
     }
 };
 
 $execute {
     if (auto* director = cocos2d::CCDirector::sharedDirector()) {
         auto const currentInterval = director->getAnimationInterval();
-        if (isValidInterval(currentInterval)) {
-            s_gameRequestedInterval = currentInterval;
+        if (isUsableInterval(currentInterval)) {
+            s_lastGameInterval = currentInterval;
         }
     }
 
     listenForSettingChanges<bool>("enabled", [](bool) {
-        queueApply();
+        scheduleApply();
     });
 
     listenForSettingChanges<std::int64_t>("target-fps", [](std::int64_t) {
-        if (isBypassEnabled()) {
-            queueApply();
+        if (bypassEnabled()) {
+            scheduleApply();
         }
     });
 
-    queueApply();
+    scheduleApply();
 }
