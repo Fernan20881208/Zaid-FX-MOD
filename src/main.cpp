@@ -18,60 +18,63 @@ using namespace geode::prelude;
 
 namespace {
 
+zaidfx::PostProcessRenderer& renderer() {
+    return zaidfx::PostProcessRenderer::get();
+}
+
+zaidfx::PresetManager& presets() {
+    return zaidfx::PresetManager::get();
+}
+
+void markPresetAsCustom() {
+    if (!presets().isApplyingPreset()) {
+        presets().markCustom();
+    }
+}
+
+void triggerWhilePlaying(zaidfx::ReactiveEvent event) {
+    if (PlayLayer::get()) {
+        renderer().trigger(event);
+    }
+}
+
 void registerSettingListeners() {
-    listenForSettingChanges<bool>("enabled", [](bool value) {
-        zaidfx::PostProcessRenderer::get().setBool("enabled", value);
-
-        if (!zaidfx::PresetManager::get().isApplyingPreset()) {
-            zaidfx::PresetManager::get().markCustom();
-        }
+    listenForSettingChanges<bool>("enabled", [](bool enabled) {
+        renderer().setBool("enabled", enabled);
+        markPresetAsCustom();
     });
 
-    listenForSettingChanges<std::string>("quality", [](std::string value) {
-        zaidfx::PostProcessRenderer::get().setString("quality", std::move(value));
-
-        if (!zaidfx::PresetManager::get().isApplyingPreset()) {
-            zaidfx::PresetManager::get().markCustom();
-        }
+    listenForSettingChanges<std::string>("quality", [](std::string quality) {
+        renderer().setString("quality", std::move(quality));
+        markPresetAsCustom();
     });
 
-    listenForSettingChanges<std::string>("preset", [](std::string value) {
-        if (
-            value != "Custom" &&
-            !zaidfx::PresetManager::get().isApplyingPreset()
-        ) {
-            // Geode commits every control in the popup separately. Applying on the
-            // next main-thread update prevents stale slider values from overwriting
-            // the selected preset.
-            zaidfx::PresetManager::get().queuePreset(std::move(value));
+    listenForSettingChanges<std::string>("preset", [](std::string preset) {
+        if (preset == "Custom" || presets().isApplyingPreset()) {
+            return;
         }
+
+        // The settings popup commits its controls one by one. Deferring the
+        // preset keeps old slider values from overwriting the new selection.
+        presets().queuePreset(std::move(preset));
     });
 
-    for (auto const& definition : zaidfx::kBoolDefinitions) {
+    for (auto const& setting : zaidfx::kBoolDefinitions) {
         listenForSettingChanges<bool>(
-            std::string(definition.key),
-            [key = definition.key](bool value) {
-                zaidfx::PostProcessRenderer::get().setBool(key, value);
-
-                if (!zaidfx::PresetManager::get().isApplyingPreset()) {
-                    zaidfx::PresetManager::get().markCustom();
-                }
+            std::string(setting.key),
+            [key = setting.key](bool value) {
+                renderer().setBool(key, value);
+                markPresetAsCustom();
             }
         );
     }
 
-    for (auto const& definition : zaidfx::kFloatDefinitions) {
+    for (auto const& setting : zaidfx::kFloatDefinitions) {
         listenForSettingChanges<double>(
-            std::string(definition.key),
-            [key = definition.key](double value) {
-                zaidfx::PostProcessRenderer::get().setFloat(
-                    key,
-                    static_cast<float>(value)
-                );
-
-                if (!zaidfx::PresetManager::get().isApplyingPreset()) {
-                    zaidfx::PresetManager::get().markCustom();
-                }
+            std::string(setting.key),
+            [key = setting.key](double value) {
+                renderer().setFloat(key, static_cast<float>(value));
+                markPresetAsCustom();
             }
         );
     }
@@ -81,93 +84,77 @@ void registerSettingListeners() {
 
 class $modify(ZaidFXEGLView, CCEGLView) {
     void swapBuffers() {
-        zaidfx::PostProcessRenderer::get().processPresentedFrame();
+        renderer().processPresentedFrame();
         CCEGLView::swapBuffers();
     }
 };
 
 class $modify(ZaidFXPlayerObject, PlayerObject) {
     struct Fields {
-        float lastX = 0.0f;
-        bool hasLastPosition = false;
+        float previousX = 0.0f;
+        bool hasPreviousPosition = false;
     };
 
     void update(float dt) {
         PlayerObject::update(dt);
 
         if (!PlayLayer::get() || dt <= 0.0001f) {
-            m_fields->hasLastPosition = false;
+            m_fields->hasPreviousPosition = false;
             return;
         }
 
-        auto const x = getPositionX();
-        if (m_fields->hasLastPosition) {
-            auto const pixelsPerSecond =
-                std::abs(x - m_fields->lastX) / std::max(dt, 0.001f);
-            auto const speed = std::clamp(
+        auto const currentX = getPositionX();
+        if (m_fields->hasPreviousPosition) {
+            auto const distance = std::abs(currentX - m_fields->previousX);
+            auto const pixelsPerSecond = distance / std::max(dt, 0.001f);
+            auto const normalizedSpeed = std::clamp(
                 pixelsPerSecond / 900.0f,
                 0.0f,
                 1.0f
             );
-            zaidfx::PostProcessRenderer::get().setGameplaySpeed(speed);
+
+            renderer().setGameplaySpeed(normalizedSpeed);
         }
 
-        m_fields->lastX = x;
-        m_fields->hasLastPosition = true;
+        m_fields->previousX = currentX;
+        m_fields->hasPreviousPosition = true;
     }
 
     bool pushButton(PlayerButton button) {
         auto const accepted = PlayerObject::pushButton(button);
-        if (accepted && PlayLayer::get()) {
-            zaidfx::PostProcessRenderer::get().trigger(
-                zaidfx::ReactiveEvent::Jump
-            );
+        if (accepted) {
+            triggerWhilePlaying(zaidfx::ReactiveEvent::Jump);
         }
         return accepted;
     }
 
     void ringJump(RingObject* object, bool skipCheck) {
         PlayerObject::ringJump(object, skipCheck);
-        if (PlayLayer::get()) {
-            zaidfx::PostProcessRenderer::get().trigger(
-                zaidfx::ReactiveEvent::Orb
-            );
-        }
+        triggerWhilePlaying(zaidfx::ReactiveEvent::Orb);
     }
 
     void switchedToMode(GameObjectType type) {
         PlayerObject::switchedToMode(type);
-        if (PlayLayer::get()) {
-            zaidfx::PostProcessRenderer::get().trigger(
-                zaidfx::ReactiveEvent::Portal
-            );
-        }
+        triggerWhilePlaying(zaidfx::ReactiveEvent::Portal);
     }
 };
 
 class $modify(ZaidFXGameLayer, GJBaseGameLayer) {
     void pickupItem(EffectGameObject* object) {
         GJBaseGameLayer::pickupItem(object);
-
-        if (PlayLayer::get()) {
-            zaidfx::PostProcessRenderer::get().trigger(
-                zaidfx::ReactiveEvent::Coin
-            );
-        }
+        triggerWhilePlaying(zaidfx::ReactiveEvent::Coin);
     }
 };
 
 class $modify(ZaidFXPlayLayer, PlayLayer) {
     void destroyPlayer(PlayerObject* player, GameObject* object) {
-        zaidfx::PostProcessRenderer::get().trigger(
-            zaidfx::ReactiveEvent::Death
-        );
+        renderer().trigger(zaidfx::ReactiveEvent::Death);
         PlayLayer::destroyPlayer(player, object);
     }
 };
 
 $execute {
-    zaidfx::PostProcessRenderer::get().initialize();
+    renderer().initialize();
     registerSettingListeners();
-    zaidfx::PresetManager::get().initialize();
+    presets().initialize();
 }
