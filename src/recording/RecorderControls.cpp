@@ -15,57 +15,69 @@ using namespace geode::prelude;
 
 namespace {
 
+zaidfx::ScreenRecorder& recorder() {
+    return zaidfx::ScreenRecorder::get();
+}
+
+bool isRecording(zaidfx::RecorderState state) {
+    return state == zaidfx::RecorderState::Starting ||
+        state == zaidfx::RecorderState::Recording;
+}
+
 char const* buttonText(zaidfx::RecorderState state) {
-    switch (state) {
-        case zaidfx::RecorderState::Starting:
-        case zaidfx::RecorderState::Recording:
-            return "STOP";
-        case zaidfx::RecorderState::Pending:
-            return "SAVE";
-        default:
-            return "REC";
+    if (isRecording(state)) {
+        return "STOP";
     }
+    if (state == zaidfx::RecorderState::Pending) {
+        return "SAVE";
+    }
+    return "REC";
 }
 
 ccColor3B buttonColor(zaidfx::RecorderState state) {
-    switch (state) {
-        case zaidfx::RecorderState::Starting:
-        case zaidfx::RecorderState::Recording:
-            return { 255, 82, 82 };
-        case zaidfx::RecorderState::Pending:
-            return { 255, 214, 82 };
-        default:
-            return { 225, 110, 125 };
+    if (isRecording(state)) {
+        return { 255, 82, 82 };
     }
+    if (state == zaidfx::RecorderState::Pending) {
+        return { 255, 214, 82 };
+    }
+    return { 225, 110, 125 };
 }
 
 class RecorderOverlay final : public cocos2d::CCLayer {
 public:
     static RecorderOverlay* create() {
-        auto* result = new RecorderOverlay();
-        if (result && result->init()) {
-            result->autorelease();
-            return result;
+        auto* overlay = new RecorderOverlay();
+        if (overlay && overlay->init()) {
+            overlay->autorelease();
+            return overlay;
         }
-        CC_SAFE_DELETE(result);
+
+        CC_SAFE_DELETE(overlay);
         return nullptr;
     }
 
     bool init() override {
-        if (!CCLayer::init()) return false;
+        if (!CCLayer::init()) {
+            return false;
+        }
 
         setID("recorder-overlay"_spr);
         setAnchorPoint({ 0.0f, 0.0f });
         setPosition({ 0.0f, 0.0f });
 
         m_menu = cocos2d::CCMenu::create();
-        if (!m_menu) return false;
+        if (!m_menu) {
+            return false;
+        }
+
         m_menu->setID("recorder-overlay-menu"_spr);
         m_menu->setZOrder(1);
         addChild(m_menu, 1);
 
+        auto const state = recorder().state();
         m_buttonSprite = ButtonSprite::create(
-            buttonText(zaidfx::ScreenRecorder::get().state()),
+            buttonText(state),
             "goldFont.fnt",
             "GJ_button_01.png",
             0.72f
@@ -73,27 +85,28 @@ public:
 
         cocos2d::CCNode* visual = m_buttonSprite;
         if (!visual) {
-            m_fallbackLabel = cocos2d::CCLabelBMFont::create("REC", "bigFont.fnt");
+            m_fallbackLabel = cocos2d::CCLabelBMFont::create(
+                buttonText(state),
+                "bigFont.fnt"
+            );
             visual = m_fallbackLabel;
         }
-        if (!visual) return false;
+        if (!visual) {
+            return false;
+        }
 
         visual->setScale(0.44f);
-        auto const initialColor = buttonColor(zaidfx::ScreenRecorder::get().state());
-        if (m_buttonSprite) {
-            m_buttonSprite->setCascadeColorEnabled(true);
-            m_buttonSprite->setColor(initialColor);
-        }
-        if (m_fallbackLabel) {
-            m_fallbackLabel->setColor(initialColor);
-        }
+        setVisualColor(buttonColor(state));
 
         m_button = CCMenuItemSpriteExtra::create(
             visual,
             this,
             menu_selector(RecorderOverlay::onRecorder)
         );
-        if (!m_button) return false;
+        if (!m_button) {
+            return false;
+        }
+
         m_button->setID("screen-recorder-floating-button"_spr);
         m_menu->addChild(m_button);
 
@@ -108,96 +121,144 @@ public:
     }
 
 private:
-    void refresh(bool force) {
-        auto const state = zaidfx::ScreenRecorder::get().state();
-        if (force || state != m_lastState) {
-            if (m_buttonSprite) {
-                m_buttonSprite->setString(buttonText(state));
-                m_buttonSprite->setColor(buttonColor(state));
-            }
-            if (m_fallbackLabel) {
-                m_fallbackLabel->setString(buttonText(state));
-                m_fallbackLabel->setColor(buttonColor(state));
-            }
-            m_lastState = state;
+    void setVisualColor(ccColor3B color) {
+        if (m_buttonSprite) {
+            m_buttonSprite->setCascadeColorEnabled(true);
+            m_buttonSprite->setColor(color);
+        }
+        if (m_fallbackLabel) {
+            m_fallbackLabel->setColor(color);
+        }
+    }
+
+    void updateAppearance(zaidfx::RecorderState state) {
+        auto const* text = buttonText(state);
+        auto const color = buttonColor(state);
+
+        if (m_buttonSprite) {
+            m_buttonSprite->setString(text);
+        }
+        if (m_fallbackLabel) {
+            m_fallbackLabel->setString(text);
         }
 
+        setVisualColor(color);
+        m_lastState = state;
+    }
+
+    void updatePosition() {
         auto* director = cocos2d::CCDirector::sharedDirector();
-        if (director && m_menu) {
-            auto const size = director->getWinSize();
-            setContentSize(size);
-            // Independent top-right overlay: it never participates in a game
-            // menu layout, so it cannot move or deform existing buttons.
-            m_menu->setPosition({ size.width - 34.0f, size.height - 34.0f });
+        if (!director || !m_menu) {
+            return;
         }
 
-        float scale = 1.0f;
-        if (
-            state == zaidfx::RecorderState::Starting ||
-            state == zaidfx::RecorderState::Recording
-        ) {
-            scale = 1.0f + std::sin(m_elapsed * 5.0f) * 0.045f;
+        auto const windowSize = director->getWinSize();
+        setContentSize(windowSize);
+
+        // Keep the recorder outside Geometry Dash menu layouts.
+        m_menu->setPosition({
+            windowSize.width - 34.0f,
+            windowSize.height - 34.0f
+        });
+    }
+
+    void updatePulse(zaidfx::RecorderState state) {
+        if (!m_button) {
+            return;
         }
-        if (m_button) m_button->setScale(scale);
+
+        auto scale = 1.0f;
+        if (isRecording(state)) {
+            scale += std::sin(m_elapsed * 5.0f) * 0.045f;
+        }
+
+        m_button->setScale(scale);
+    }
+
+    void refresh(bool force) {
+        auto const state = recorder().state();
+
+        if (force || state != m_lastState) {
+            updateAppearance(state);
+        }
+
+        updatePosition();
+        updatePulse(state);
     }
 
     void showStatus() {
         refresh(true);
         FLAlertLayer::create(
             "ZaidFX Recorder",
-            zaidfx::ScreenRecorder::get().statusMessage(),
+            recorder().statusMessage(),
             "OK"
         )->show();
     }
 
-    void onRecorder(cocos2d::CCObject*) {
-        auto& recorder = zaidfx::ScreenRecorder::get();
+    void confirmStart() {
+        createQuickPopup(
+            "Internal recorder",
+            "Record the final processed image as an <cy>MP4</c>. "
+            "The floating button remains available in menus, level lists "
+            "and gameplay. This version records <co>video only</c>.",
+            "Cancel",
+            "Record",
+            [this](FLAlertLayer*, bool confirmed) {
+                if (confirmed) {
+                    recorder().requestStart();
+                }
+                showStatus();
+            }
+        );
+    }
 
-        switch (recorder.state()) {
+    void confirmStop() {
+        createQuickPopup(
+            "Stop recording?",
+            "The captured frames will be finalized into a temporary MP4. "
+            "Afterward you can save or delete it.",
+            "Continue",
+            "Stop",
+            [this](FLAlertLayer*, bool confirmed) {
+                if (confirmed) {
+                    recorder().requestStop();
+                }
+                showStatus();
+            }
+        );
+    }
+
+    void resolvePendingRecording() {
+        createQuickPopup(
+            "Recording ready",
+            "Choose <cg>Save</c> to keep the MP4 in the mod recordings "
+            "folder, or <cr>Delete</c> to remove it permanently.",
+            "Delete",
+            "Save",
+            [this](FLAlertLayer*, bool save) {
+                if (save) {
+                    recorder().savePending();
+                } else {
+                    recorder().deletePending();
+                }
+                showStatus();
+            }
+        );
+    }
+
+    void onRecorder(cocos2d::CCObject*) {
+        switch (recorder().state()) {
             case zaidfx::RecorderState::Idle:
-                createQuickPopup(
-                    "Internal recorder",
-                    "Record the final processed image as an <cy>MP4</c>. "
-                    "The floating button remains available in menus, level lists "
-                    "and gameplay. This version records <co>video only</c>.",
-                    "Cancel",
-                    "Record",
-                    [this](FLAlertLayer*, bool start) {
-                        if (start) zaidfx::ScreenRecorder::get().requestStart();
-                        showStatus();
-                    }
-                );
+                confirmStart();
                 break;
 
             case zaidfx::RecorderState::Starting:
             case zaidfx::RecorderState::Recording:
-                createQuickPopup(
-                    "Stop recording?",
-                    "The captured frames will be finalized into a temporary MP4. "
-                    "Afterward you can save or delete it.",
-                    "Continue",
-                    "Stop",
-                    [this](FLAlertLayer*, bool stop) {
-                        if (stop) zaidfx::ScreenRecorder::get().requestStop();
-                        showStatus();
-                    }
-                );
+                confirmStop();
                 break;
 
             case zaidfx::RecorderState::Pending:
-                createQuickPopup(
-                    "Recording ready",
-                    "Choose <cg>Save</c> to keep the MP4 in the mod recordings "
-                    "folder, or <cr>Delete</c> to remove it permanently.",
-                    "Delete",
-                    "Save",
-                    [this](FLAlertLayer*, bool save) {
-                        auto& current = zaidfx::ScreenRecorder::get();
-                        if (save) current.savePending();
-                        else current.deletePending();
-                        showStatus();
-                    }
-                );
+                resolvePendingRecording();
                 break;
         }
     }
@@ -211,7 +272,10 @@ private:
 };
 
 void attachRecorderOverlay(cocos2d::CCNode* host) {
-    if (!host || host->getChildByID("recorder-overlay"_spr)) return;
+    if (!host || host->getChildByID("recorder-overlay"_spr)) {
+        return;
+    }
+
     if (auto* overlay = RecorderOverlay::create()) {
         host->addChild(overlay, 10000);
     }
